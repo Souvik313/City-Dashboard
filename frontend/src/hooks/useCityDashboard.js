@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 const API_URL = "http://localhost:5000";
@@ -17,7 +17,7 @@ export default function useCityDashboard(
   const [aqi, setAqi] = useState(createSection());
   const [weather, setWeather] = useState(createSection());
   const [traffic, setTraffic] = useState(createSection());
-  const [sentiment, setSentiment] = useState(createSection());
+  const [cityPulse, setCityPulse] = useState(createSection());
 
 const fetchData = async (setState, endpoint) => {
   if (!city) return;
@@ -50,6 +50,7 @@ const fetchData = async (setState, endpoint) => {
     fetchData(setAqi, "aqi/latest");
     fetchData(setWeather, "weather/latest");
     fetchData(setTraffic, "traffic/latest");
+    fetchData(setCityPulse, "citypulse");
   };
 
   useEffect(() => {
@@ -65,6 +66,7 @@ const fetchData = async (setState, endpoint) => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city, enabled, pollingInterval]);
 
   const globalLoading =
@@ -74,12 +76,13 @@ const fetchData = async (setState, endpoint) => {
     aqi,
     weather,
     traffic,
-    sentiment,
+    cityPulse,
     refreshAll: fetchAll,
     refreshAqi: () => fetchData(setAqi, "aqi/latest"),
     refreshWeather: () => fetchData(setWeather, "weather/latest"),
     refreshTraffic: () => fetchData(setTraffic, "traffic/latest"),
-    globalLoading
+    refreshCityPulse: () => fetchData(setCityPulse, "citypulse"),
+    globalLoading: globalLoading || cityPulse.loading
   };
 }
 

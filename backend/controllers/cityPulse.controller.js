@@ -15,7 +15,7 @@ export const getCityPulse = catchAsync(async (req, res, next) => {
 
   if (!pulse) {
     return next(
-      new AppError("Unable to generate city pulse", 500)
+      new AppError("City not found or city pulse data is unavailable", 404)
     );
   }
 

@@ -1,0 +1,146 @@
+.prediction-insight {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--primary-dim);
+  background: linear-gradient(135deg, rgba(59, 91, 219, 0.04) 0%, rgba(59, 91, 219, 0.01) 100%);
+}
+
+.prediction-insight-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.prediction-insight-header h4 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.prediction-insight-time {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.prediction-source-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.prediction-source-badge.model {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.prediction-source-badge.trend {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.prediction-insight-error {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.prediction-insight-note {
+  margin-top: 12px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.prediction-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.prediction-metric {
+  display: grid;
+  gap: 4px;
+}
+
+.prediction-metric strong {
+  font-size: 1.35rem;
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.prediction-metric span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.prediction-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.prediction-delta.up {
+  color: var(--danger);
+}
+
+.prediction-delta.down {
+  color: var(--success);
+}
+
+.prediction-delta.stable {
+  color: var(--muted);
+}
+
+.prediction-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.prediction-overview-card {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.prediction-overview-card h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.prediction-overview-card .overview-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.prediction-overview-card .overview-meta {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .prediction-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+html.dark .prediction-insight {
+  background: linear-gradient(135deg, rgba(107, 140, 255, 0.08) 0%, rgba(107, 140, 255, 0.02) 100%);
+}

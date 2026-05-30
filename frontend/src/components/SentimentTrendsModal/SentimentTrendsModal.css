@@ -1,3 +1,24 @@
+.sentiment-trends-modal-wide {
+  max-width: 980px;
+}
+
+.sentiment-trends-close-floating {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.sentiment-trends-body-embedded {
+  padding-top: 20px;
+}
+
+.sentiment-trends-modal-wide {
+  position: relative;
+}
+
 /* SentimentTrendsModal.css */
 
 .sentiment-trends-overlay {

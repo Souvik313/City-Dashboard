@@ -1,18 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useCityDashboard from "../../hooks/useCityDashboard.js";
-import Header from "../../components/Header/Header.jsx";
-import { formatTimeAgo } from "../../hooks/formatTime.jsx";
+import useDashboardPredictions, { formatDelta } from "../../hooks/useDashboardPredictions.js";
+import PredictionInsight, { PredictionDelta } from "../../components/PredictionInsight/PredictionInsight.jsx";
 import dashboard_icon from '../../assets/smart-city.png';
-import haze_icon from '../../assets/haze.png';
 import axios from "axios";
 import AQITrendsModal from "../../components/AQITrendsModal/AQITrendsModal.jsx";
 import WeatherTrendsModal from "../../components/WeatherTrendsModal/WeatherTrendsModal.jsx";
 import TrafficTrendsModal from "../../components/TrafficTrendsModal/TrafficTrendsModal.jsx";
 import SentimentTrendsModal from "../../components/SentimentTrendsModal/SentimentTrendsModal.jsx";
 import ChatbotIcon from '../../assets/ChatbotIcon.svg';
+import airQualityIcon from '../../assets/air-quality-icon.svg';
+import weatherIcon from '../../assets/weather-icon.svg';
+import trafficIcon from '../../assets/traffic-icon.svg';
+import sentimentIcon from '../../assets/sentiment-icon.svg';
+import incidentIcon from '../../assets/incident-icon.svg';
+import heatmapIcon from '../../assets/heatmap-icon.svg';
+import weatherClearIcon from '../../assets/weather-clear.svg';
+import weatherCloudsIcon from '../../assets/weather-clouds.svg';
+import weatherRainIcon from '../../assets/weather-rain.svg';
+import weatherStormIcon from '../../assets/weather-storm.svg';
+import weatherSnowIcon from '../../assets/weather-snow.svg';
+import weatherFogIcon from '../../assets/weather-fog.svg';
+import weatherHazeIcon from '../../assets/weather-haze.svg';
+import weatherWindIcon from '../../assets/weather-wind.svg';
+import weatherUnknownIcon from '../../assets/weather-unknown.svg';
 import "./Dashboard.css";
+import "../../components/PredictionInsight/PredictionInsight.css";
+import Alerts from "../../components/Alerts/Alerts.jsx";
 import Chat from "../../components/Chat/Chat.jsx";
+import IncidentReport from "../../components/IncidentReport/IncidentReport.jsx";
+import CityHeatmap from "../../components/CityHeatmap/CityHeatmap.jsx";
+import SentimentPanel from "../../components/SentimentPanel/SentimentPanel.jsx";
 const API_URL = "http://localhost:5000";
 
 export default function Dashboard() {
@@ -26,10 +45,377 @@ export default function Dashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [darkMode , setDarkMode] = useState(false);
 
+  const weatherIconMap = {
+    clear: weatherClearIcon,
+    clouds: weatherCloudsIcon,
+    rain: weatherRainIcon,
+    drizzle: weatherRainIcon,
+    thunderstorm: weatherStormIcon,
+    snow: weatherSnowIcon,
+    mist: weatherFogIcon,
+    smoke: weatherHazeIcon,
+    haze: weatherHazeIcon,
+    dust: weatherHazeIcon,
+    fog: weatherFogIcon,
+    sand: weatherHazeIcon,
+    ash: weatherHazeIcon,
+    squall: weatherWindIcon,
+    tornado: weatherStormIcon,
+    wind: weatherWindIcon,
+  };
+
+  const getWeatherIcon = (conditionMain) => {
+    const key = String(conditionMain || '').toLowerCase();
+    return weatherIconMap[key] || weatherUnknownIcon;
+  };
+
+  const getHealthStatus = (score) => {
+    if (score == null) {
+      return { label: "Unavailable", description: "No health score available yet.", color: "var(--muted)" };
+    }
+
+    if (score >= 80) {
+      return { label: "Healthy", description: "City systems are performing well across air, traffic, weather, and sentiment.", color: "var(--success)" };
+    }
+
+    if (score >= 60) {
+      return { label: "Stable", description: "City health is acceptable but there are areas to watch.", color: "var(--warning)" };
+    }
+
+    if (score >= 40) {
+      return { label: "At risk", description: "Conditions are declining and may need attention soon.", color: "var(--danger)" };
+    }
+
+    return { label: "Critical", description: "City health is poor and major issues are impacting urban livability.", color: "var(--danger)" };
+  };
+
+  const [activeTopic, setActiveTopic] = useState('air');
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
 
   const cityName = selectedCity?.name;
+
+  const topics = [
+    { id: 'air', icon: airQualityIcon, label: 'Air Quality', description: 'AQI details, pollutant levels, health impact, and next-hour forecast.' },
+    { id: 'weather', icon: weatherIcon, label: 'Weather', description: 'Current conditions and next-hour weather forecast.' },
+    { id: 'traffic', icon: trafficIcon, label: 'Traffic', description: 'Congestion status, hotspots, and next-hour traffic outlook.' },
+    { id: 'sentiment', icon: sentimentIcon, label: 'Sentiment', description: 'Citizen mood pulse, chat trends, topics, and emotion analytics.' },
+    { id: 'incidents', icon: incidentIcon, label: 'Incident Reports', description: 'Submit issues, view analytics, and track recent local reports.' },
+    { id: 'heatmap', icon: heatmapIcon, label: 'Heatmap', description: 'Interactive city map with AQI, weather, traffic hotspots, and incident layers.' },
+  ];
+
+  const activeTopicMeta = topics.find((topic) => topic.id === activeTopic);
+
+  const renderTopicContent = () => {
+    if (!selectedCity) {
+      return (
+        <div className="dashboard-empty-state">
+          <h3>Select a city to explore dashboard topics.</h3>
+          <p>Use the search box above to load your city.</p>
+        </div>
+      );
+    }
+
+    switch (activeTopic) {
+      case 'weather':
+        return (
+          <div className="topic-panel">
+            <div className="topic-section">
+              <h3>Current weather</h3>
+              {weather.loading && <div className="skeleton">Loading weather…</div>}
+              {weather.error && <div className="error">Weather error: {weather.error}</div>}
+              {weather.data && (
+                <div className="topic-card">
+                  <img
+                    src={getWeatherIcon(weather.data.condition?.main)}
+                    alt={weather.data.condition?.description || 'Current weather'}
+                    className="weather-cond"
+                  />
+                  <div className="metric-row">
+                    <div className="metric">
+                      <strong>{weather.data.temperature}°C</strong>
+                      <span>Temperature</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{weather.data.condition?.description || '—'}</strong>
+                      <span>Condition</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{weather.data.humidity ?? '—'}</strong>
+                      <span>Humidity</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{weather.data.wind?.speed || '—'}</strong>
+                      <span>Wind speed</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <PredictionInsight
+                title="Next-hour weather forecast"
+                loading={weatherPrediction.loading}
+                error={weatherPrediction.error}
+                fallback={weatherPrediction.data?.fallback}
+                timestamp={weatherPrediction.data?.timestamp}
+              >
+                {weatherPrediction.data && (
+                  <div className="prediction-metrics">
+                    <div className="prediction-metric">
+                      <strong>{weatherPrediction.data.temperature ?? "—"}°C</strong>
+                      <span>Temperature</span>
+                      {weather.data?.temperature != null && weatherPrediction.data.temperature != null && (
+                        <PredictionDelta
+                          delta={formatDelta(
+                            weatherPrediction.data.temperature - weather.data.temperature,
+                            "°C"
+                          )}
+                        />
+                      )}
+                    </div>
+                    <div className="prediction-metric">
+                      <strong>{weatherPrediction.data.condition || "—"}</strong>
+                      <span>Condition</span>
+                    </div>
+                    <div className="prediction-metric">
+                      <strong>{weatherPrediction.data.humidity ?? "—"}%</strong>
+                      <span>Humidity</span>
+                    </div>
+                  </div>
+                )}
+              </PredictionInsight>
+            </div>
+          </div>
+        );
+
+      case 'traffic':
+        return (
+          <div className="topic-panel">
+            <div className="topic-section">
+              <h3>Traffic status</h3>
+              {traffic.loading && <div className="skeleton">Loading traffic…</div>}
+              {traffic.error && <div className="error">Traffic error: {traffic.error}</div>}
+              {traffic.data && (
+                <div className="topic-card">
+                  <div className="metric-row">
+                    <div className="metric">
+                      <strong>{traffic.data.congestion.level}</strong>
+                      <span>Congestion</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{traffic.data.speed.average ?? '—'}</strong>
+                      <span>Average speed</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{traffic.data.roadClosureCount}</strong>
+                      <span>Road closures</span>
+                    </div>
+                  </div>
+                  <div className="hotspots-panel">
+                    <strong>Top hotspot</strong>
+                    {traffic.data.hotspots && traffic.data.hotspots.length > 0 ? (
+                      <>
+                        <div className="hotspot-summary">
+                          {traffic.data.hotspots[0].roadName} • Delay {secToMin(traffic.data.hotspots[0].delaySeconds)} min
+                        </div>
+                        {traffic.data.hotspots.length > 1 && (
+                          <button className="show-more-btn" disabled={traffic.loading} onClick={() => setShowHotspotsModal(true)}>
+                            View all hotspots
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="muted">No major hotspots detected.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <PredictionInsight
+                title="Next-hour traffic outlook"
+                loading={trafficPrediction.loading}
+                error={trafficPrediction.error}
+                fallback={trafficPrediction.data?.fallback}
+                timestamp={trafficPrediction.data?.timestamp}
+              >
+                {trafficPrediction.data && (
+                  <div className="prediction-metrics">
+                    <div className="prediction-metric">
+                      <strong>{trafficPrediction.data.congestionLevel}</strong>
+                      <span>Congestion</span>
+                    </div>
+                    <div className="prediction-metric">
+                      <strong>{trafficPrediction.data.avgSpeed ?? "—"}</strong>
+                      <span>Avg speed (km/h)</span>
+                      {traffic.data?.speed?.average != null &&
+                        trafficPrediction.data.avgSpeed != null && (
+                          <PredictionDelta
+                            delta={formatDelta(
+                              trafficPrediction.data.avgSpeed - traffic.data.speed.average,
+                              " km/h"
+                            )}
+                          />
+                        )}
+                    </div>
+                    <div className="prediction-metric">
+                      <strong>{trafficPrediction.data.travelTimeIndex ?? "—"}</strong>
+                      <span>Travel time index</span>
+                    </div>
+                  </div>
+                )}
+              </PredictionInsight>
+            </div>
+          </div>
+        );
+
+      case 'sentiment':
+        return (
+          <div className="topic-panel">
+            <div className="topic-section sentiment-section">
+              <SentimentPanel cityName={cityName} />
+            </div>
+          </div>
+        );
+
+      case 'incidents':
+        return (
+          <div className="topic-panel">
+            <IncidentReport
+              city={selectedCity}
+              onSelectIncident={setSelectedIncident}
+              selectedIncident={selectedIncident}
+              onCloseIncident={() => setSelectedIncident(null)}
+            />
+          </div>
+        );
+
+      case 'heatmap':
+        return (
+          <div className="topic-panel">
+            <div className="topic-section city-heatmap-section">
+              <CityHeatmap
+                city={selectedCity}
+                aqi={aqi}
+                weather={weather}
+                traffic={traffic}
+                aqiPrediction={aqiPrediction}
+              />
+            </div>
+          </div>
+        );
+
+      case 'air':
+      default:
+        return (
+          <div className="topic-panel">
+            <div className="topic-section">
+              <h3>Air quality overview</h3>
+              {aqi.loading && <div className="skeleton">Loading air quality data…</div>}
+              {aqi.error && <div className="error">⚠ {aqi.error}</div>}
+              {aqi.data && (
+                <div className="topic-card air-card">
+                <div className="aqi-overview-panel">
+                  <div className="aqi-summary">
+                    <div className="aqi-value">
+                      <span className="value">{aqi.data.aqiValue}</span>
+                      <span className="label">AQI</span>
+                    </div>
+                    <div className="aqi-summary-detail">
+                      <span className={`aqi-badge ${aqi.data.category?.toLowerCase().replace(/ /g, "-")}`}>
+                        {aqiBadge(aqi.data.category)}
+                      </span>
+                      <p className="aqi-summary-copy">
+                        Current air quality is <strong>{aqi.data.category || "unknown"}</strong>. Use pollutant readings to understand local exposure risk.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="aqi-metrics-grid">
+                    <div className="pollutant-card">
+                      <span>PM2.5</span>
+                      <strong>{aqi.data.pollutants?.pm25 ?? "—"}</strong>
+                    </div>
+                    <div className="pollutant-card">
+                      <span>PM10</span>
+                      <strong>{aqi.data.pollutants?.pm10 ?? "—"}</strong>
+                    </div>
+                    <div className="pollutant-card">
+                      <span>NO₂</span>
+                      <strong>{aqi.data.pollutants?.no2 ?? "—"}</strong>
+                    </div>
+                    <div className="pollutant-card">
+                      <span>SO₂</span>
+                      <strong>{aqi.data.pollutants?.so2 ?? "—"}</strong>
+                    </div>
+                    <div className="pollutant-card">
+                      <span>O₃</span>
+                      <strong>{aqi.data.pollutants?.o3 ?? "—"}</strong>
+                    </div>
+                    <div className="pollutant-card">
+                      <span>CO₂</span>
+                      <strong>{aqi.data.pollutants?.co2 ?? "—"}</strong>
+                    </div>
+                  </div>
+
+                  <div className="health-impact enhanced-health-impact">
+                    <div>
+                      <strong>Health Impact</strong>
+                      <p>{aqi.data.healthImpact}</p>
+                    </div>
+                    <span className="risk-pill">{aqi.data.category || "Moderate"}</span>
+                  </div>
+
+                  <button className="analyze-btn" disabled={aqi.loading} onClick={() => setShowAqiTrendsModal(true)}>
+                    Analyze latest trends
+                  </button>
+                </div>
+              </div>
+              )}
+              <PredictionInsight
+                title="Next-hour AQI forecast"
+                loading={aqiPrediction.loading}
+                error={aqiPrediction.error}
+                fallback={aqiPrediction.data?.fallback}
+                timestamp={aqiPrediction.data?.timestamp}
+                message={aqiPrediction.data?.message}
+              >
+                {aqiPrediction.data && (
+                  <>
+                    <div className="aqi-summary">
+                      <div className="aqi-value">
+                        <span className="value">{aqiPrediction.data.prediction}</span>
+                        <span className="label">Predicted AQI</span>
+                      </div>
+                      <span className={`aqi-badge ${aqiPrediction.data.category?.toLowerCase().split(" ")[0]}`}>
+                        {aqiBadge(aqiPrediction.data.category)}
+                      </span>
+                    </div>
+                    <div className="prediction-metrics">
+                      <div className="prediction-metric">
+                        <strong>±{aqiPrediction.data.uncertainty ?? "—"}</strong>
+                        <span>Uncertainty</span>
+                      </div>
+                      <div className="prediction-metric">
+                        <strong>{aqiPrediction.data.currentAqi ?? aqi.data?.aqiValue ?? "—"}</strong>
+                        <span>Current AQI</span>
+                        {aqiPrediction.data.currentAqi != null && (
+                          <PredictionDelta
+                            delta={formatDelta(
+                              aqiPrediction.data.prediction - aqiPrediction.data.currentAqi
+                            )}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </PredictionInsight>
+            </div>
+          </div>
+        );
+    }
+  };
 
   useEffect(() => {
     const header = document.querySelector(".dashboard-header");
@@ -75,25 +461,129 @@ export default function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const qCity = params.get("city");
-    if (qCity) {
-      fetchCityDetails(qCity);
-    } 
+
+    const fetchCity = async () => {
+      if (qCity) {
+        await fetchCityDetails(qCity);
+      }
+    };
+
+    fetchCity();
   }, [location.search]);
 
   const {
     aqi,
     weather,
     traffic,
+    cityPulse,
     refreshAll,
-    refreshAqi,
-    refreshWeather,
-    refreshTraffic,
     globalLoading,
   } = useCityDashboard(cityName, { pollingInterval: 0, enabled: Boolean(cityName) });
 
-  // useEffect(() => {
-  //   console.log("AQI FULL STATE:", aqi);
-  // }, [aqi]);
+  const {
+    aqi: aqiPrediction,
+    weather: weatherPrediction,
+    traffic: trafficPrediction,
+    refreshPredictions,
+  } = useDashboardPredictions(cityName, { enabled: Boolean(cityName) });
+
+  const handleRefreshAll = () => {
+    refreshAll();
+    refreshPredictions();
+  };
+
+  const renderPredictionOverview = () => {
+    if (!selectedCity) return null;
+
+    const aqiDelta = aqiPrediction.data
+      ? formatDelta(aqiPrediction.data.prediction - (aqiPrediction.data.currentAqi ?? aqi.data?.aqiValue))
+      : null;
+
+    return (
+      <div className="prediction-overview">
+        <div className="prediction-overview-card">
+          <h3>Air quality</h3>
+          {aqiPrediction.loading ? (
+            <div className="skeleton">Loading…</div>
+          ) : aqiPrediction.data ? (
+            <>
+              <div className="overview-value">{aqiPrediction.data.prediction} AQI</div>
+              <div className="overview-meta">
+                {aqiPrediction.data.category}
+                {aqiPrediction.data.uncertainty != null && ` · ±${aqiPrediction.data.uncertainty}`}
+              </div>
+              <PredictionDelta delta={aqiDelta} />
+            </>
+          ) : (
+            <div className="muted">{aqiPrediction.error || "Forecast unavailable"}</div>
+          )}
+        </div>
+
+        <div className="prediction-overview-card">
+          <h3>Weather</h3>
+          {weatherPrediction.loading ? (
+            <div className="skeleton">Loading…</div>
+          ) : weatherPrediction.data ? (
+            <>
+              <div className="overview-value">
+                {weatherPrediction.data.temperature != null
+                  ? `${weatherPrediction.data.temperature}°C`
+                  : "—"}
+              </div>
+              <div className="overview-meta">
+                {weatherPrediction.data.condition || "Condition pending"}
+              </div>
+            </>
+          ) : (
+            <div className="muted">{weatherPrediction.error || "Forecast unavailable"}</div>
+          )}
+        </div>
+
+        <div className="prediction-overview-card">
+          <h3>Traffic</h3>
+          {trafficPrediction.loading ? (
+            <div className="skeleton">Loading…</div>
+          ) : trafficPrediction.data ? (
+            <>
+              <div className="overview-value">
+                {trafficPrediction.data.congestionLevel}
+              </div>
+              <div className="overview-meta">
+                {trafficPrediction.data.avgSpeed != null
+                  ? `${trafficPrediction.data.avgSpeed} km/h avg speed`
+                  : "Speed estimate pending"}
+              </div>
+            </>
+          ) : (
+            <div className="muted">{trafficPrediction.error || "Forecast unavailable"}</div>
+          )}
+        </div>
+
+        <div className="prediction-overview-card">
+          <h3>City health</h3>
+          {cityPulse.loading ? (
+            <div className="skeleton">Loading…</div>
+          ) : cityPulse.error ? (
+            <div className="muted">{cityPulse.error || "Health overview unavailable"}</div>
+          ) : cityPulse.data ? (
+            <>
+              <div className="overview-value">
+                {cityPulse.data.pulseScore != null ? `${cityPulse.data.pulseScore}%` : "—"}
+              </div>
+              <div className="overview-meta" style={{ color: getHealthStatus(cityPulse.data.pulseScore).color }}>
+                {getHealthStatus(cityPulse.data.pulseScore).label}
+              </div>
+              <div className="overview-description">
+                {getHealthStatus(cityPulse.data.pulseScore).description}
+              </div>
+            </>
+          ) : (
+            <div className="muted">Health overview unavailable</div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (showHotspotsModal) {
@@ -136,6 +626,21 @@ export default function Dashboard() {
     if (typeof seconds !== "number" || seconds < 0) return "—";
     return (seconds / 60).toFixed(1);
   }
+
+  const distanceFromCityCenter = (lat, lng) => {
+    if (!selectedCity?.latitude || !selectedCity?.longitude) return null;
+    const toRad = (value) => (value * Math.PI) / 180;
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = toRad(lat - selectedCity.latitude);
+    const dLon = toRad(lng - selectedCity.longitude);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(selectedCity.latitude)) *
+      Math.cos(toRad(lat)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return (R * c).toFixed(1);
+  };
 
   const openCityMap = () => {
     if(!selectedCity) return;
@@ -218,6 +723,7 @@ export default function Dashboard() {
                   </svg>
                 )}
           </button>
+          <Alerts city={selectedCity} />
           <button
             className="btn-exit"
             onClick={() => navigate("/")}
@@ -228,306 +734,92 @@ export default function Dashboard() {
         </header>
 
         <main className="dashboard-main">
-          <div className="dashboard-controls">
-            <div>
-              Active city: <strong>{cityName || "—"}</strong>
-            </div>
-            <button
-              onClick={refreshAll}
-              disabled={!cityName}
-              className="btn-refresh"
-            >
-              ⟳ Refresh all
-            </button>
-            {globalLoading && (
-              <span className="loading-indicator">Loading…</span>
-            )}
-          </div>
-
-          <section className="cards-grid">
-            <article className="dashboard-card">
-              <header className="card-header">
+          <div className={`dashboard-layout ${sidebarCollapsed ? 'collapsed' : ''}`}>
+            <aside className={`dashboard-sidebar-panel ${sidebarCollapsed ? 'collapsed' : ''}`}>
+              <div className="sidebar-header">
                 <div>
-                  <h2>
-                    <span className="card-icon air">🌫️</span>
-                    Air Quality
-                  </h2>
-                  <span className="card-subtitle">AQI Index</span>
+                  <div className="dashboard-sidebar-title">CityPulse Topics</div>
+                  <div className="dashboard-sidebar-city">{cityName || 'Choose a city'}</div>
                 </div>
-
                 <button
-                  className="icon-button"
-                  onClick={refreshAqi}
-                  disabled={!cityName || aqi.loading}
+                  type="button"
+                  className="sidebar-toggle"
+                  onClick={() => setSidebarCollapsed((open) => !open)}
+                  aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
-                  ⟳
+                  {sidebarCollapsed ? '›' : '‹'}
                 </button>
-              </header>
-
-              <div className="card-body">
-                {aqi.loading && (
-                  <div className="skeleton">Loading air quality data…</div>
-                )}
-
-                {aqi.error && <div className="error">⚠ {aqi.error}</div>}
-
-                {aqi.data && cityName && cityName.name !== "" && (
-                  <>
-                    <div className="aqi-summary">
-                      <div className="aqi-value">
-                        <span className="value">{aqi.data.aqiValue}</span>
-                        <span className="label">AQI</span>
-                      </div>
-
-                      <span
-                        className={`aqi-badge ${aqi.data.category?.toLowerCase()}`}
-                      >
-                        {aqiBadge(aqi.data.category)}
-                      </span>
-                    </div>
-
-                    <div className="pollutants-grid">
-                      <div>
-                        <span>PM2.5</span>
-                        <strong>{aqi.data.pollutants?.pm25}</strong>
-                      </div>
-                      <div>
-                        <span>PM10</span>
-                        <strong>{aqi.data.pollutants?.pm10}</strong>
-                      </div>
-                      <div>
-                        <span>NO₂</span>
-                        <strong>{aqi.data.pollutants?.no2}</strong>
-                      </div>
-                      <div>
-                        <span>SO₂</span>
-                        <strong>{aqi.data.pollutants?.so2}</strong>
-                      </div>
-                      <div>
-                        <span>O₃</span>
-                        <strong>{aqi.data.pollutants?.o3}</strong>
-                      </div>
-                      <div>
-                        <span>CO₂</span>
-                        <strong>{aqi.data.pollutants?.co2}</strong>
-                      </div>
-                    </div>
-
-                    <div className="health-impact">
-                      <strong>Health Impact:</strong>
-                      <p>{aqi.data.healthImpact}</p>
-                    </div>
-
-                    <div className="muted">
-                      Updated {formatTimeAgo(aqi.lastUpdated)}
-                    </div>
-
-                    <button
-                      className="analyze-btn"
-                      disabled={aqi.loading}
-                      onClick={() => setShowAqiTrendsModal(true)}
-                    >
-                      Analyze latest trends
-                    </button>
-                  </>
-                )}
-
-                {!aqi.loading && !aqi.error && !aqi.data && (
-                  <div className="empty">No AQI data available.</div>
-                )}
               </div>
-            </article>
-
-            <article className="card">
-              <header className="card-header">
-                <h2>🌤️ Weather</h2>
-                <div className="card-actions">
+              <hr className="sidebar-divider" />
+              <nav className="dashboard-topic-nav">
+                {topics.map((topic) => (
                   <button
-                    className="icon-button"
-                    onClick={refreshWeather}
-                    disabled={!cityName || aqi.loading}
+                    key={topic.id}
+                    type="button"
+                    className={`dashboard-topic-nav-item ${activeTopic === topic.id ? 'active' : ''}`}
+                    onClick={() => setActiveTopic(topic.id)}
+                    title={sidebarCollapsed ? topic.label : ''}
                   >
-                    ⟳
+                    <span className="topic-icon">
+                      <img src={topic.icon} alt={`${topic.label} icon`} />
+                    </span>
+                    <span className="topic-label">{topic.label}</span>
                   </button>
+                ))}
+              </nav>
+            </aside>
+
+            <section className="dashboard-content-panel">
+              <div className="dashboard-controls">
+                <div>
+                  Active city: <strong>{cityName || '—'}</strong>
                 </div>
-              </header>
-              <div className="card-body">
-                {weather.loading && (
-                  <div className="skeleton">Loading weather…</div>
-                )}
-                {weather.error && (
-                  <div className="error">Weather error: {weather.error}</div>
-                )}
-                {weather.data && cityName && cityName.name !== "" && (
-                  <>
-                    <img src={haze_icon} alt="" className="weather-cond"/>
-                    <div className="metric">
-                      <strong>{weather.data.temperature}°C</strong>
-                      <span>Temperature</span>
-                    </div>
-
-                    <div className="metric">
-                      <strong>
-                        {weather.data.condition?.description || "—"}
-                      </strong>
-                      <span>Condition</span>
-                    </div>
-
-                    <div className="metric">
-                      <strong>{weather.data.humidity ?? "—"}</strong>
-                      <span>Humidity</span>
-                    </div>
-
-                    <div className="metric">
-                      <strong>{weather.data.wind?.speed || "—"}</strong>
-                      <span>Wind speed(m/s)</span>
-                    </div>
-
-                    <div className="muted">
-                      Updated {formatTimeAgo(weather.lastUpdated)}
-                    </div>
-
-                    <button
-                      className="analyze-btn"
-                      disabled={weather.loading}
-                      onClick={() => setShowWeatherTrendsModal(true)}
-                    >
-                      Analyze latest trends
-                    </button>
-                  </>
-                )}
-                {!weather.loading && !weather.error && !weather.data && (
-                  <div className="empty">No weather data available.</div>
-                )}
-              </div>
-            </article>
-
-            <article className="card">
-              <header className="card-header">
-                <h2>🚦Traffic</h2>
-                <div className="card-actions">
-                  <button
-                    className="icon-button"
-                    onClick={refreshTraffic}
-                    disabled={!cityName || traffic.loading}
-                  >
-                    ⟳
-                  </button>
-                </div>
-              </header>
-              <div className="card-body">
-                {traffic.loading && (
-                  <div className="skeleton">Loading traffic…</div>
-                )}
-                {traffic.error && (
-                  <div className="error">Traffic error: {traffic.error}</div>
-                )}
-                {traffic.data && cityName && cityName.name !== "" && (
-                  <div>
-                    <div>
-                      <strong>Congestion:</strong>{" "}
-                      {traffic.data.congestion.level}
-                    </div>
-                    <br />
-                    <div>
-                      <strong>Avg speed(km/h):</strong>{" "}
-                      {traffic.data.speed.average ?? "—"}
-                    </div>
-                    <br />
-                    <div>
-                      <strong>Road closure count:</strong>{" "}
-                      {traffic.data.roadClosureCount}
-                    </div>
-                    <br />
-                    <div className="hotspots-container">
-                      <strong>Hotspots:</strong>
-
-                      {traffic.data.hotspots && traffic.data.hotspots.length > 0 ? (
-                        <>
-                          <div className="hotspots">
-                            {traffic.data.hotspots[0].roadName} - Delay:{" "}
-                            {secToMin(traffic.data.hotspots[0].delaySeconds)} min
-                          </div>
-
-                          {traffic.data.hotspots.length > 1 && (
-                            <>
-
-                                  <button
-                                  disabled={traffic.loading}
-                                    onClick={() => {setShowHotspotsModal(true) ; document.activeElement?.blur();}}
-                                    className="show-more-btn"
-                                  >
-                                View All Hotspots
-                              </button>
-                            </>
-                          )}
-
-                          {showHotspotsModal && (
-                            <div className="modal-overlay" onClick={() => setShowHotspotsModal(false)}>
-                              <div className="modal-content" onClick={e => e.stopPropagation()}>
-                                <h3>Traffic Hotspots</h3>
-                                <button className="close-modal" onClick={() => setShowHotspotsModal(false)} onMouseDown={(e) => e.preventDefault()}>✕</button>
-
-                                {traffic.data.hotspots.map((hotspot, index) => (
-                                  <div key={index} className="modal-hotspot">
-                                    <div className="hotspot-info">
-                                      <strong>{hotspot.roadName}</strong> – Delay:{" "}
-                                      <span>{secToMin(hotspot.delaySeconds)} min</span>
-                                    </div>
-
-                                    <iframe
-                                      title={`map-${index}`}
-                                      width="100%"
-                                      height="180"
-                                      style={{ border: 0, borderRadius: "10px", marginTop: "8px" }}
-                                      loading="lazy"
-                                      allowFullScreen
-                                      src={`https://www.google.com/maps?q=${hotspot.lat},${hotspot.lng}&z=16&output=embed`}
-                                    /> 
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        " None"
-                      )}
-                    </div>
-                    <br />
-                    <div className="muted">
-                      Updated {formatTimeAgo(traffic.lastUpdated)}
-                    </div>
-                    <br />
-                      <button className="analyze-btn" disabled={traffic.loading} onClick={() => setShowTrafficTrendsModal(true)}>Analyze latest trends</button>
-                  </div>
-                  
-                )}
-                {!traffic.loading && !traffic.error && !traffic.data && (
-                  <div className="empty">No traffic data available.</div>
-                )}
-              </div>
-            </article>
-
-            <article className="card">
-              <header className="card-header">
-                <h2>💬 Sentiment</h2>
-              </header>
-              <div className="card-body">
-                <p className="muted">
-                  Sentiment is derived from chatbot messages for this city.
-                  More chat activity improves the data.
-                </p>
                 <button
-                  className="analyze-btn"
+                  onClick={handleRefreshAll}
                   disabled={!cityName}
-                  onClick={() => setShowSentimentTrendsModal(true)}
+                  className="btn-refresh"
                 >
-                  Analyze latest trends
+                  ⟳ Refresh all
                 </button>
+                {(globalLoading || aqiPrediction.loading) && (
+                  <span className="loading-indicator">Loading…</span>
+                )}
               </div>
-            </article>
-          </section>
+
+              {renderPredictionOverview()}
+
+              <div className="topic-header">
+                <div>
+                  <h2>{activeTopicMeta?.label || 'Air Quality'}</h2>
+                  <p className="topic-description">{activeTopicMeta?.description}</p>
+                </div>
+                <div className="topic-actions">
+                  {activeTopic === 'air' && (
+                    <button className="analyze-btn" disabled={!cityName} onClick={() => setShowAqiTrendsModal(true)}>
+                      Analyze latest trends
+                    </button>
+                  )}
+                  {activeTopic === 'weather' && (
+                    <button className="analyze-btn" disabled={!cityName} onClick={() => setShowWeatherTrendsModal(true)}>
+                      Analyze latest trends
+                    </button>
+                  )}
+                  {activeTopic === 'traffic' && (
+                    <button className="analyze-btn" disabled={!cityName} onClick={() => setShowTrafficTrendsModal(true)}>
+                      Analyze latest trends
+                    </button>
+                  )}
+                  {activeTopic === 'sentiment' && (
+                    <button className="analyze-btn" disabled={!cityName} onClick={() => setShowSentimentTrendsModal(true)}>
+                      Analyze latest trends
+                    </button>
+                  )}
+                </div>
+              </div>
+
+                      {renderTopicContent()}
+            </section>
+          </div>
         </main>
 
         {/* Chat widget for city feedback */}
@@ -560,6 +852,47 @@ export default function Dashboard() {
             cityName={cityName}
             onClose={() => setShowTrafficTrendsModal(false)}
           />
+        )}
+        {showHotspotsModal && traffic.data?.hotspots?.length > 0 && (
+          <div className="modal-overlay" onClick={() => setShowHotspotsModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h3>All traffic hotspots</h3>
+              <button className="close-modal" onClick={() => setShowHotspotsModal(false)} aria-label="Close hotspots modal">✕</button>
+              <div className="modal-hotspot-list">
+                {traffic.data.hotspots.map((hotspot, index) => (
+                  <div key={`${hotspot.roadName}-${index}`} className="modal-hotspot">
+                    <div className="hotspot-info">
+                      <strong>{hotspot.roadName || 'Unknown Road'}</strong>
+                      <span>{hotspot.delaySeconds != null ? `${secToMin(hotspot.delaySeconds)}min delay` : 'No delay data'}</span>
+                    </div>
+                    <div className="hotspot-info">
+                      <span>{hotspot.severity ? `Severity ${hotspot.severity}` : 'Severity unknown'}</span>
+                      <span>{hotspot.lat && hotspot.lng ? `${distanceFromCityCenter(hotspot.lat, hotspot.lng)} km from city center` : 'Location unknown'}</span>
+                    </div>
+                    {hotspot.lat && hotspot.lng && (
+                      <div className="hotspot-map-container">
+                        <iframe
+                          className="hotspot-map"
+                          title={`Map preview for ${hotspot.roadName || 'hotspot'}`}
+                          src={`https://www.google.com/maps?q=${hotspot.lat},${hotspot.lng}&z=15&output=embed`}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                        <a
+                          className="hotspot-map-overlay"
+                          href={`https://www.google.com/maps?q=${hotspot.lat},${hotspot.lng}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open in Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
         {showSentimentTrendsModal && cityName && (
           <SentimentTrendsModal

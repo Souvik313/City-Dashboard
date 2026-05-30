@@ -33,6 +33,8 @@ export const fetchAndStoreAQIForCity = async (cityName) => {
     healthImpact: aqi.healthImpact || null,
     recordedAt: new Date()
   });
+
+  return { cityDoc, aqi };
 };
 
 export const fetchLiveAQI = async ({ city }) => {

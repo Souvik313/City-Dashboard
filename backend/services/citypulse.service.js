@@ -2,11 +2,25 @@ import AQIData from "../models/AQI.model.js";
 import WeatherData from "../models/WeatherData.model.js";
 import TrafficData from "../models/TrafficData.model.js";
 import SentimentRecord from "../models/SentimentRecord.model.js";
+import City from "../models/city.model.js";
+
+const escapeRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * Main CityPulse aggregation service
  */
 export const generateCityPulse = async (city) => {
+  const cityRecord = await City.findOne({
+    name: new RegExp(`^${escapeRegex(city.trim())}$`, "i")
+  });
+
+  if (!cityRecord) {
+    return null;
+  }
+
+  const cityId = cityRecord._id;
+
   // Fetch latest records in parallel
   const [
     latestAQI,
@@ -14,10 +28,10 @@ export const generateCityPulse = async (city) => {
     latestTraffic,
     sentimentStats
   ] = await Promise.all([
-    AQIData.findOne({ city }).sort({ recordedAt: -1 }),
-    WeatherData.findOne({ city }).sort({ recordedAt: -1 }),
-    TrafficData.findOne({ city }).sort({ recordedAt: -1 }),
-    aggregateRecentSentiment(city)
+    AQIData.findOne({ city: cityId }).sort({ recordedAt: -1 }),
+    WeatherData.findOne({ city: cityId }).sort({ recordedAt: -1 }),
+    TrafficData.findOne({ city: cityId }).sort({ recordedAt: -1 }),
+    aggregateRecentSentiment(cityId)
   ]);
 
   return {
@@ -25,21 +39,21 @@ export const generateCityPulse = async (city) => {
     timestamp: new Date(),
     airQuality: latestAQI
       ? {
-          aqi: latestAQI.aqi,
+          aqi: latestAQI.aqiValue,
           category: latestAQI.category
         }
       : null,
     weather: latestWeather
       ? {
           temperature: latestWeather.temperature,
-          condition: latestWeather.weatherCondition,
+          condition: latestWeather.condition,
           humidity: latestWeather.humidity
         }
       : null,
     traffic: latestTraffic
       ? {
-          congestionLevel: latestTraffic.congestionLevel,
-          averageSpeed: latestTraffic.averageSpeed
+          congestionLevel: latestTraffic.congestion?.level,
+          averageSpeed: latestTraffic.speed?.average
         }
       : null,
     publicSentiment: sentimentStats,
@@ -55,11 +69,11 @@ export const generateCityPulse = async (city) => {
 /**
  * Aggregate sentiment for last 1 hour
  */
-const aggregateRecentSentiment = async (city) => {
+const aggregateRecentSentiment = async (cityId) => {
   const result = await SentimentRecord.aggregate([
     {
       $match: {
-        city,
+        city: cityId,
         createdAt: {
           $gte: new Date(Date.now() - 60 * 60 * 1000)
         }
@@ -84,16 +98,19 @@ const calculatePulseScore = ({ aqi, traffic, weather, sentiment }) => {
   let score = 100;
 
   // AQI impact
-  if (aqi?.aqi) {
-    if (aqi.aqi > 300) score -= 30;
-    else if (aqi.aqi > 200) score -= 20;
-    else if (aqi.aqi > 100) score -= 10;
+  const aqiValue = aqi?.aqiValue ?? aqi?.aqi;
+  if (typeof aqiValue === "number") {
+    if (aqiValue > 300) score -= 30;
+    else if (aqiValue > 200) score -= 20;
+    else if (aqiValue > 100) score -= 10;
   }
 
   // Traffic impact
-  if (traffic?.congestionLevel === "Severe") score -= 20;
-  else if (traffic?.congestionLevel === "High") score -= 15;
-  else if (traffic?.congestionLevel === "Moderate") score -= 8;
+  const congestionLevel =
+    traffic?.congestion?.level || traffic?.congestionLevel || "unknown";
+  if (congestionLevel.toLowerCase() === "high") score -= 15;
+  else if (congestionLevel.toLowerCase() === "moderate") score -= 8;
+  else if (congestionLevel.toLowerCase() === "severe") score -= 20;
 
   // Weather discomfort
   if (weather?.temperature > 40) score -= 10;

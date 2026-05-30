@@ -1,0 +1,227 @@
+.incident-analytics {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--card-bg) 0%, var(--bg-subtle) 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.incident-analytics-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.incident-analytics-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.incident-analytics-subtitle {
+  margin-top: 6px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.incident-analytics-period {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+
+.incident-analytics-period button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.incident-analytics-period button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.incident-analytics-loading,
+.incident-analytics-error,
+.incident-analytics-empty {
+  padding: 18px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+}
+
+.incident-analytics-loading {
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.incident-analytics-error {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.incident-analytics-empty {
+  background: var(--bg);
+  color: var(--muted);
+  text-align: center;
+}
+
+.incident-analytics-summary,
+.incident-analytics-status-row {
+  display: grid;
+  gap: 12px;
+}
+
+.incident-analytics-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.incident-analytics-status-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.incident-analytics-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.incident-analytics-card.primary {
+  border-color: var(--primary-dim);
+  background: var(--primary-light);
+}
+
+.incident-analytics-card.highlight {
+  border-color: rgba(59, 91, 219, 0.25);
+}
+
+.incident-analytics-card.reported {
+  border-color: rgba(230, 119, 0, 0.25);
+  background: var(--warning-light);
+}
+
+.incident-analytics-card.progress {
+  border-color: var(--primary-dim);
+  background: var(--primary-light);
+}
+
+.incident-analytics-card.resolved {
+  border-color: rgba(47, 158, 68, 0.25);
+  background: var(--success-light);
+}
+
+.incident-analytics-card-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.incident-analytics-card-value {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.incident-analytics-card-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.incident-analytics-charts {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+
+.incident-analytics-chart-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.incident-analytics-chart-panel.wide {
+  grid-column: 1 / -1;
+}
+
+.incident-analytics-chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.incident-analytics-chart-head h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.incident-analytics-chart-head span {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.incident-analytics-legend {
+  display: grid;
+  gap: 8px;
+}
+
+.incident-analytics-legend-item {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.incident-analytics-legend-item strong {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.incident-analytics-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+@media (max-width: 960px) {
+  .incident-analytics-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .incident-analytics-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .incident-analytics-summary,
+  .incident-analytics-status-row {
+    grid-template-columns: 1fr;
+  }
+}

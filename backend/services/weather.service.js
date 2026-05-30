@@ -118,5 +118,7 @@ export const fetchAndStoreWeatherForCity = async (cityName) => {
     cloudCover: weather.cloudCoverage ?? null,
     recordedAt: new Date()
   });
+
+  return { cityDoc, weather };
 };
 

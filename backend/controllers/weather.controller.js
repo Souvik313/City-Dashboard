@@ -175,11 +175,11 @@ export const getLatestWeatherByCity = catchAsync(async (req, res, next) => {
 });
 
 export const getWeatherHistory = catchAsync(async (req, res, next) => {
-  const { city, limit = 200 } = req.query;
+  const { city, limit = 1000 } = req.query;
 
   if (!city) {
     return next(
-      new AppError("City query parameter is required", 400)
+      new AppError("City query parameter is required", 400) 
     );
   }
 
@@ -193,7 +193,7 @@ export const getWeatherHistory = catchAsync(async (req, res, next) => {
     if (!cityDoc) return next(new AppError("No city found matching the provided name", 404));
     cityId = cityDoc._id;
   }
-
+  
   const history = await WeatherData.find({ city: cityId })
     .sort({ recordedAt: -1 })
     .limit(Number(limit));

@@ -14,6 +14,9 @@ import trafficRouter from './routes/traffic.routes.js';
 import sentimentRouter from './routes/sentiment.routes.js';
 import cityPulseRouter from './routes/citypulse.routes.js';
 import chatRouter from './routes/chat.routes.js';
+import incidentRouter from './routes/incident.routes.js';
+import alertsRouter from './routes/alerts.routes.js';
+import preferencesRouter from './routes/preferences.routes.js';
 import './jobs/aqiPoller.js'; // Import the AQI poller to start it when the server runs
 import './jobs/weatherPoller.js'; // Import the Weather poller to start it when the server runs
 // import './jobs/trafficPoller.js';
@@ -31,6 +34,9 @@ app.use("/api/v1/aqi" , aqiRouter);
 app.use("/api/v1/weather" , weatherRouter);
 app.use("/api/v1/traffic" , trafficRouter);
 app.use("/api/v1/sentiment" , sentimentRouter);
+app.use("/api/v1/incidents" , incidentRouter);
+app.use('/api/v1/alerts', alertsRouter);
+app.use('/api/v1/preferences', preferencesRouter);
 app.use("/api/v1/citypulse" , cityPulseRouter);
 app.use("/api/v1/chat" , chatRouter);
 app.get('/' , (req, res) => {
@@ -40,10 +46,14 @@ app.get('/' , (req, res) => {
 // create HTTP server and attach socket.io
 const server = http.createServer(app);
 
-server.listen(PORT, async () =>{
+const startServer = async () => {
+  await connectToDatabase();
+  initSocket(server);
+  server.listen(PORT, () => {
     console.log(`Listening to server on http://localhost:${PORT}`);
-    await connectToDatabase();
-    initSocket(server);
-});
+  });
+};
+
+startServer();
 
 export default app;

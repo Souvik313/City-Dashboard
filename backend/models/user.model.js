@@ -24,6 +24,13 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: 5
     }
+    ,
+    preferences: {
+        alerts: {
+            inApp: { type: Boolean, default: true },
+            email: { type: Boolean, default: false }
+        }
+    }
 }, {timestamps: true});
 
 const User = mongoose.model("User", userSchema);

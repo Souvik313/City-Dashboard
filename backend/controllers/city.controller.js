@@ -24,13 +24,13 @@ export const getCityByName = async(req , res , next) => {
     try{
         const {city} = req.query;
         if(!city){
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
                 message: "City name must be provided"
             })
         }
 
-        const cityFound = await City.findOne({ name: city });
+        const cityFound = await City.findOne({ name: new RegExp(`^${city.trim()}$`, 'i') });
         if(!cityFound){
             return res.status(404).json({
                 success: false,
@@ -119,29 +119,33 @@ export const createNewCity = async (req, res, next) => {
     }
 
     // Defaults
-    let latitude = null;
-    let longitude = null;
+    let latitude = 0;
+    let longitude = 0;
     let state = "Unknown";
     let country = "Unknown";
 
     // 3️⃣ Fetch geo data
-    const geoRes = await axios.get(
-      "https://api.openweathermap.org/geo/1.0/direct",
-      {
-        params: {
-          q: cityName,
-          limit: 1,
-          appid: process.env.OPENWEATHER_API_KEY,
-        },
-      }
-    );
+    try {
+      const geoRes = await axios.get(
+        "https://api.openweathermap.org/geo/1.0/direct",
+        {
+          params: {
+            q: cityName,
+            limit: 1,
+            appid: process.env.OPENWEATHER_API_KEY,
+          },
+        }
+      );
 
-    if (geoRes.data?.length) {
-      const geoData = geoRes.data[0];
-      latitude = geoData.lat;
-      longitude = geoData.lon;
-      state = geoData.state || "Unknown";
-      country = geoData.country || "Unknown";
+      if (geoRes.data?.length) {
+        const geoData = geoRes.data[0];
+        latitude = geoData.lat ?? 0;
+        longitude = geoData.lon ?? 0;
+        state = geoData.state || "Unknown";
+        country = geoData.country || "Unknown";
+      }
+    } catch (geoError) {
+      console.warn('City geolocation lookup failed:', geoError?.message || geoError);
     }
 
     // 4️⃣ Create city

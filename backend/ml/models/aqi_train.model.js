@@ -1,7 +1,8 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { saveModelToDir } from '../utils/tfModelIO.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -112,7 +113,7 @@ function createModel(inputSize) {
     model.compile({
         optimizer: tf.train.adam(CONFIG.learningRate),
         loss: 'meanSquaredError',
-        metrics: ['meanAbsoluteError']
+        metrics: ['mae']
     });
 
     return model;
@@ -170,26 +171,19 @@ async function trainModel(datasetPath, modelSavePath = null) {
                         `Epoch ${epoch + 1}/${CONFIG.epochs} - ` +
                         `loss: ${logs.loss.toFixed(4)}, ` +
                         `val_loss: ${logs.val_loss.toFixed(4)}, ` +
-                        `mae: ${logs.meanAbsoluteError.toFixed(4)}, ` +
-                        `val_mae: ${logs.val_meanAbsoluteError.toFixed(4)}`
+                        `mae: ${(logs.mae ?? logs.meanAbsoluteError ?? 0).toFixed(4)}, ` +
+                        `val_mae: ${(logs.val_mae ?? logs.val_meanAbsoluteError ?? 0).toFixed(4)}`
                     );
                 }
             }
         };
-
-        // Fix: actually use early stopping from CONFIG
-        const earlyStopping = tf.callbacks.earlyStopping({
-            monitor: 'val_loss',
-            patience: CONFIG.earlyStopping.patience,
-            restoreBestWeights: true
-        });
 
         console.log('\n🎓 Training model...');
         await model.fit(trainFeatures, trainTargets, {
             epochs: CONFIG.epochs,
             batchSize: effectiveBatchSize,
             validationData: [valFeatures, valTargets],
-            callbacks: [epochLogCallback, earlyStopping],
+            callbacks: [epochLogCallback],
             verbose: 0
         });
 
@@ -235,7 +229,7 @@ async function trainModel(datasetPath, modelSavePath = null) {
 
         // Fix: save model first, then write params
         console.log(`\n💾 Saving model to: ${modelSavePath}`);
-        await model.save(`file://${modelSavePath}`);
+        await saveModelToDir(model, modelSavePath);
 
         const normalizationParams = {
             featureMin: Array.from(await featureMin.data()),

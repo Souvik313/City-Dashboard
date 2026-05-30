@@ -3,6 +3,7 @@ import City from "../models/city.model.js";
 import DataSource from "../models/dataSource.model.js";
 import { fetchLiveAQI } from "../services/aqi.service.js";
 import { getAQITrends as getAQITrendsService } from "../services/aqiTrends.service.js";
+import aqiPredictService from "../services/aqiPredict.service.js";
 import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
 const AQI_CACHE_TIME = 10*60*1000; //10 Minutes
@@ -128,7 +129,7 @@ export const getLatestAQIByCity = catchAsync(async (req, res, next) => {
 });
 
 export const getAQIHistory = catchAsync(async (req, res, next) => {
-  const { city, limit = 200 } = req.query;
+  const { city, limit = 1000 } = req.query;
 
   if (!city) {
     return next(
@@ -181,4 +182,24 @@ export const getAQITrends = catchAsync(async (req, res, next) => {
     status: "success",
     data,
   });
+});
+
+export const getAqiPrediction = catchAsync(async (req, res, next) => {
+  const { city } = req.query;
+  if (!city) return next(new AppError('City query parameter is required', 400));
+
+  const { Types } = (await import('mongoose'));
+  let cityId = null;
+  if (Types.ObjectId.isValid(city)) {
+    cityId = city;
+  } else {
+    const cityDoc = await City.findOne({ name: { $regex: new RegExp(`^${city}$`, 'i') } });
+    if (!cityDoc) return next(new AppError('City not found', 404));
+    cityId = cityDoc._id;
+  }
+
+  const modelPath = process.env.PREDICT_AQI_MODEL_PATH || null;
+  const prediction = await aqiPredictService.predictNextHour(cityId, modelPath);
+
+  res.status(200).json({ status: 'success', data: prediction });
 });

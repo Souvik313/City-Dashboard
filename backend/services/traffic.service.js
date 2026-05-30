@@ -2,14 +2,9 @@ import axios from "axios";
 import AppError from "../utils/AppError.js";
 import { latLonToTile} from "../utils/latLonToTile.js";
 import { getSurroundingTiles } from "../utils/getSurroundingTiles.js";
-/**
- * Fetch live traffic data from TomTom Traffic Flow API
- * @param {Object} params
- * @param {string} params.city
- * @param {number} params.lat
- * @param {number} params.lon
- * @param {number} params.radius
- */
+import TrafficData from "../models/TrafficData.model.js";
+import City from "../models/city.model.js";
+import DataSource from "../models/dataSource.model.js";
 
 const generateSamplePoints = (lat, lon) => {
   const baseLat = Number(lat);
@@ -133,6 +128,59 @@ export const fetchLiveTraffic = async ({ city, lat, lon }) => {
     }
     throw new AppError("Failed to fetch live traffic", 500);
   }
+};
+
+export const fetchAndStoreTrafficForCity = async (cityName) => {
+  const cityDoc = await City.findOne({
+    name: { $regex: new RegExp(`^${cityName}$`, "i") }
+  });
+
+  if (!cityDoc) throw new AppError(`City not found: ${cityName}`, 404);
+
+  if (!cityDoc.latitude || !cityDoc.longitude) {
+    throw new AppError(`No coordinates for city: ${cityName}`, 400);
+  }
+
+  const traffic = await fetchLiveTraffic({
+    city: cityDoc.name,
+    lat: cityDoc.latitude,
+    lon: cityDoc.longitude
+  });
+
+  let dataSource = await DataSource.findOne({ name: "TOMTOM api" });
+  if (!dataSource) {
+    dataSource = await DataSource.create({
+      name: "TOMTOM api",
+      type: "api",
+      reliabilityScore: 9,
+      lastFetchedAt: new Date()
+    });
+  }
+
+  dataSource.lastFetchedAt = new Date();
+  await dataSource.save();
+
+  await TrafficData.create({
+    city: cityDoc._id,
+    source: dataSource._id,
+    congestion: {
+      level: traffic.congestion.level,
+      travelTimeIndex: traffic.congestion.travelTimeIndex
+    },
+    speed: {
+      average: traffic.speed.average,
+      freeFlow: traffic.speed.freeFlow
+    },
+    roadClosureCount: traffic.roadClosureCount,
+    incidents: traffic.incidents,
+    hotspots: traffic.hotspots,
+    recordedAt: new Date(),
+    ingestionMeta: {
+      apiLatencyMs: traffic.ingestionMeta.apiLatencyMs,
+      confidence: traffic.ingestionMeta.confidence,
+      recordedAt: traffic.ingestionMeta.fetchedAt
+    }
+  });
 };
 
 /**
