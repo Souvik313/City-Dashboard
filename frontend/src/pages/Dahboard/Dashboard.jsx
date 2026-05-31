@@ -315,62 +315,92 @@ export default function Dashboard() {
               {aqi.error && <div className="error">⚠ {aqi.error}</div>}
               {aqi.data && (
                 <div className="topic-card air-card">
-                <div className="aqi-overview-panel">
-                  <div className="aqi-summary">
-                    <div className="aqi-value">
-                      <span className="value">{aqi.data.aqiValue}</span>
-                      <span className="label">AQI</span>
+                  <div className="aqi-overview-panel">
+                    <div className="aqi-summary">
+                      <div className="aqi-value">
+                        <span className="value">{aqi.data.aqiValue}</span>
+                        <span className="label">AQI</span>
+                      </div>
+                      <div className="aqi-summary-detail">
+                        <span className={`aqi-badge ${aqi.data.category?.toLowerCase().replace(/ /g, "-")}`}>
+                          {aqiBadge(aqi.data.category)}
+                        </span>
+                        <p className="aqi-summary-copy">
+                          Current air quality is <strong>{aqi.data.category || "Unknown"}</strong>. This gives a quick view of city-wide risk.
+                        </p>
+                      </div>
                     </div>
-                    <div className="aqi-summary-detail">
-                      <span className={`aqi-badge ${aqi.data.category?.toLowerCase().replace(/ /g, "-")}`}>
-                        {aqiBadge(aqi.data.category)}
-                      </span>
-                      <p className="aqi-summary-copy">
-                        Current air quality is <strong>{aqi.data.category || "unknown"}</strong>. Use pollutant readings to understand local exposure risk.
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="aqi-metrics-grid">
-                    <div className="pollutant-card">
-                      <span>PM2.5</span>
-                      <strong>{aqi.data.pollutants?.pm25 ?? "—"}</strong>
+                    <div className="aqi-quick-insights">
+                      <div className="aqi-quick-card">
+                        <span>Dominant pollutant</span>
+                        <strong>{(aqi.data.dominantPollutant || "unknown").toUpperCase()}</strong>
+                        <p>Most likely driver of current AQI risk.</p>
+                      </div>
+                      <div className="aqi-quick-card">
+                        <span>Risk level</span>
+                        <strong>{aqi.data.category || "Moderate"}</strong>
+                        <p>{aqi.data.healthImpact || "Monitor local conditions and reduce exposure if needed."}</p>
+                      </div>
                     </div>
-                    <div className="pollutant-card">
-                      <span>PM10</span>
-                      <strong>{aqi.data.pollutants?.pm10 ?? "—"}</strong>
-                    </div>
-                    <div className="pollutant-card">
-                      <span>NO₂</span>
-                      <strong>{aqi.data.pollutants?.no2 ?? "—"}</strong>
-                    </div>
-                    <div className="pollutant-card">
-                      <span>SO₂</span>
-                      <strong>{aqi.data.pollutants?.so2 ?? "—"}</strong>
-                    </div>
-                    <div className="pollutant-card">
-                      <span>O₃</span>
-                      <strong>{aqi.data.pollutants?.o3 ?? "—"}</strong>
-                    </div>
-                    <div className="pollutant-card">
-                      <span>CO₂</span>
-                      <strong>{aqi.data.pollutants?.co2 ?? "—"}</strong>
-                    </div>
-                  </div>
 
-                  <div className="health-impact enhanced-health-impact">
-                    <div>
-                      <strong>Health Impact</strong>
-                      <p>{aqi.data.healthImpact}</p>
+                    <div className="aqi-metrics-grid">
+                      <div className="pollutant-card">
+                        <span>PM2.5</span>
+                        <strong>{aqi.data.pollutants?.pm25 ?? "—"}</strong>
+                      </div>
+                      <div className="pollutant-card">
+                        <span>PM10</span>
+                        <strong>{aqi.data.pollutants?.pm10 ?? "—"}</strong>
+                      </div>
+                      <div className="pollutant-card">
+                        <span>NO₂</span>
+                        <strong>{aqi.data.pollutants?.no2 ?? "—"}</strong>
+                      </div>
+                      <div className="pollutant-card">
+                        <span>SO₂</span>
+                        <strong>{aqi.data.pollutants?.so2 ?? "—"}</strong>
+                      </div>
+                      <div className="pollutant-card">
+                        <span>O₃</span>
+                        <strong>{aqi.data.pollutants?.o3 ?? "—"}</strong>
+                      </div>
+                      <div className="pollutant-card">
+                        <span>CO</span>
+                        <strong>{aqi.data.pollutants?.co ?? "—"}</strong>
+                      </div>
                     </div>
-                    <span className="risk-pill">{aqi.data.category || "Moderate"}</span>
-                  </div>
 
-                  <button className="analyze-btn" disabled={aqi.loading} onClick={() => setShowAqiTrendsModal(true)}>
-                    Analyze latest trends
-                  </button>
+                    <div className="aqi-risk-block">
+                      <div className="aqi-risk-summary">
+                        <strong>Health advice</strong>
+                        <p>{aqi.data.healthImpact || "Air quality data is available. Follow local precautions if needed."}</p>
+                      </div>
+                      <div className="aqi-risk-actions">
+                      <div className="risk-section">
+                        <span className="section-label">Who is most at risk</span>
+                        <ul>
+                          {getAQIRiskInfo(aqi.data.category).atRisk.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="risk-section">
+                        <span className="section-label">Recommended actions</span>
+                        <ul>
+                          {getAQIRiskInfo(aqi.data.category).precautions.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    </div>
+
+                    <button className="analyze-btn" disabled={aqi.loading} onClick={() => setShowAqiTrendsModal(true)}>
+                      Analyze latest trends
+                    </button>
+                  </div>
                 </div>
-              </div>
               )}
               <PredictionInsight
                 title="Next-hour AQI forecast"
@@ -614,11 +644,67 @@ export default function Dashboard() {
 
   const aqiBadge = (category) => {
     switch (category?.toLowerCase()) {
-      case "good": return <div>🍃 {category}</div>
-      case "moderate": return <div>😐 {category}</div>
-      case "unhealthy": return <div>😷 {category}</div>
-      case "hazardous": return <div>☠️ {category}</div>
-      default: return <div>🌫️ {category}</div>
+      case "good":
+        return <div>🍃 {category}</div>;
+      case "moderate":
+        return <div>😐 {category}</div>;
+      case "unhealthy for sensitive groups":
+        return <div>🤧 {category}</div>;
+      case "unhealthy":
+        return <div>😷 {category}</div>;
+      case "very unhealthy":
+        return <div>⚠️ {category}</div>;
+      case "hazardous":
+        return <div>☠️ {category}</div>;
+      default:
+        return <div>🌫️ {category}</div>;
+    }
+  };
+
+  const getAQIRiskInfo = (category) => {
+    switch (String(category || "").toLowerCase()) {
+      case "good":
+        return {
+          summary: "Air quality is good. Outdoor activities are safe for everyone.",
+          atRisk: ["Everyone"],
+          precautions: ["Enjoy outdoor plans", "Keep windows open if needed", "No special action required"],
+        };
+      case "moderate":
+        return {
+          summary: "Air quality is moderate. Sensitive groups should take light precautions.",
+          atRisk: ["Children", "Elderly", "People with asthma"],
+          precautions: ["Reduce prolonged outdoor exertion", "Monitor symptoms", "Keep indoor air clean"],
+        };
+      case "unhealthy for sensitive groups":
+        return {
+          summary: "Air quality is unhealthy for sensitive groups. Limit long outdoor exposure.",
+          atRisk: ["People with respiratory issues", "Older adults", "Young children"],
+          precautions: ["Avoid heavy exercise outdoors", "Use masks when outside", "Keep windows closed during peak hours"],
+        };
+      case "unhealthy":
+        return {
+          summary: "Air quality is unhealthy. Everyone should reduce outdoor activities.",
+          atRisk: ["Everyone"],
+          precautions: ["Avoid outdoor exercise", "Keep doors and windows closed", "Use air purifiers if available"],
+        };
+      case "very unhealthy":
+        return {
+          summary: "Air quality is very unhealthy. Minimize all outdoor exposure.",
+          atRisk: ["Everyone"],
+          precautions: ["Stay indoors as much as possible", "Use N95 masks if outside", "Avoid traffic-heavy zones"],
+        };
+      case "hazardous":
+        return {
+          summary: "Air quality is hazardous. Do not stay outdoors unless absolutely necessary.",
+          atRisk: ["Everyone"],
+          precautions: ["Stay indoors", "Use high-efficiency air filtration", "Seek medical help if symptoms worsen"],
+        };
+      default:
+        return {
+          summary: "AQI category unavailable. Check local conditions and stay alert.",
+          atRisk: ["Everyone"],
+          precautions: ["Monitor air quality updates", "Limit time outdoors if you feel unwell"],
+        };
     }
   };
 
