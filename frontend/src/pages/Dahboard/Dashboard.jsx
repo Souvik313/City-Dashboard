@@ -32,7 +32,50 @@ import Chat from "../../components/Chat/Chat.jsx";
 import IncidentReport from "../../components/IncidentReport/IncidentReport.jsx";
 import CityHeatmap from "../../components/CityHeatmap/CityHeatmap.jsx";
 import SentimentPanel from "../../components/SentimentPanel/SentimentPanel.jsx";
+import Groq from "groq-sdk";
 const API_URL = "http://localhost:5000";
+
+
+const groq = new Groq({
+    apiKey: import.meta.env.VITE_GROQ_API_KEY,
+    dangerouslyAllowBrowser: true,
+});
+
+  const getAQIRiskInfo = async (category, aqiValue) => {
+    try {
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: `You are an air quality health advisor. Given the following air quality data, return a JSON object with health advice.
+
+            AQI Category: ${category}
+            AQI Value: ${aqiValue}
+
+            Respond ONLY with a valid JSON object in this exact format, no markdown, no extra text:
+            {
+              "summary": "A 1-2 sentence summary of current air quality and general safety",
+              "atRisk": ["group1", "group2"],
+              "precautions": ["precaution1", "precaution2", "precaution3"]
+            }
+
+            Make the advice specific to the AQI value (${aqiValue}), not just the category. Be concise and practical.`,
+          },
+          ],});
+
+            const text = response.choices[0].message.content.trim();
+            return JSON.parse(text);
+      } catch (err) {
+          console.error("Groq AQI advice failed:", err);
+          return {
+            summary: "Air quality data received. Check local guidelines for precautions.",
+            atRisk: ["Everyone"],
+            precautions: ["Monitor air quality updates", "Limit outdoor time if you feel unwell"],
+                };
+              }
+};
 
 export default function Dashboard() {
   const [inputCity, setInputCity] = useState("");
@@ -44,6 +87,8 @@ export default function Dashboard() {
   const [showSentimentTrendsModal, setShowSentimentTrendsModal] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [darkMode , setDarkMode] = useState(false);
+  const [riskInfo , setRiskInfo] = useState(null);
+
 
   const weatherIconMap = {
     clear: weatherClearIcon,
@@ -371,30 +416,33 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="aqi-risk-block">
+                    {!riskInfo ? (<div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </div>) : (<div className="aqi-risk-block">
                       <div className="aqi-risk-summary">
                         <strong>Health advice</strong>
                         <p>{aqi.data.healthImpact || "Air quality data is available. Follow local precautions if needed."}</p>
                       </div>
                       <div className="aqi-risk-actions">
                       <div className="risk-section">
-                        <span className="section-label">Who is most at risk</span>
-                        <ul>
-                          {getAQIRiskInfo(aqi.data.category).atRisk.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="risk-section">
-                        <span className="section-label">Recommended actions</span>
-                        <ul>
-                          {getAQIRiskInfo(aqi.data.category).precautions.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
+  <span className="section-label">Who is most at risk</span>
+  <ul>
+    {riskInfo.atRisk.map((item) => (
+      <li key={item}>{item}</li>
+    ))}
+  </ul>
+</div>
+<div className="risk-section">
+  <span className="section-label">Recommended actions</span>
+  <ul>
+    {riskInfo.precautions.map((item) => (
+      <li key={item}>{item}</li>
+    ))}
+  </ul>
+</div>
                     </div>
-                    </div>
+                    </div>)}
 
                     <button className="analyze-btn" disabled={aqi.loading} onClick={() => setShowAqiTrendsModal(true)}>
                       Analyze latest trends
@@ -661,52 +709,13 @@ export default function Dashboard() {
     }
   };
 
-  const getAQIRiskInfo = (category) => {
-    switch (String(category || "").toLowerCase()) {
-      case "good":
-        return {
-          summary: "Air quality is good. Outdoor activities are safe for everyone.",
-          atRisk: ["Everyone"],
-          precautions: ["Enjoy outdoor plans", "Keep windows open if needed", "No special action required"],
-        };
-      case "moderate":
-        return {
-          summary: "Air quality is moderate. Sensitive groups should take light precautions.",
-          atRisk: ["Children", "Elderly", "People with asthma"],
-          precautions: ["Reduce prolonged outdoor exertion", "Monitor symptoms", "Keep indoor air clean"],
-        };
-      case "unhealthy for sensitive groups":
-        return {
-          summary: "Air quality is unhealthy for sensitive groups. Limit long outdoor exposure.",
-          atRisk: ["People with respiratory issues", "Older adults", "Young children"],
-          precautions: ["Avoid heavy exercise outdoors", "Use masks when outside", "Keep windows closed during peak hours"],
-        };
-      case "unhealthy":
-        return {
-          summary: "Air quality is unhealthy. Everyone should reduce outdoor activities.",
-          atRisk: ["Everyone"],
-          precautions: ["Avoid outdoor exercise", "Keep doors and windows closed", "Use air purifiers if available"],
-        };
-      case "very unhealthy":
-        return {
-          summary: "Air quality is very unhealthy. Minimize all outdoor exposure.",
-          atRisk: ["Everyone"],
-          precautions: ["Stay indoors as much as possible", "Use N95 masks if outside", "Avoid traffic-heavy zones"],
-        };
-      case "hazardous":
-        return {
-          summary: "Air quality is hazardous. Do not stay outdoors unless absolutely necessary.",
-          atRisk: ["Everyone"],
-          precautions: ["Stay indoors", "Use high-efficiency air filtration", "Seek medical help if symptoms worsen"],
-        };
-      default:
-        return {
-          summary: "AQI category unavailable. Check local conditions and stay alert.",
-          atRisk: ["Everyone"],
-          precautions: ["Monitor air quality updates", "Limit time outdoors if you feel unwell"],
-        };
-    }
-  };
+  const aqiCategory = aqi.data?.category || "Unknown";
+  const aqiValue = aqi.data?.aqiValue ?? "—";
+  useEffect(() => {
+    if(!aqiCategory) return;
+    setRiskInfo(null); // reset risk info when AQI changes
+    getAQIRiskInfo(aqiCategory, aqiValue).then(info => setRiskInfo(info));
+  }, [aqiCategory, aqiValue]);
 
   const secToMin = (seconds) => {
     if (typeof seconds !== "number" || seconds < 0) return "—";
