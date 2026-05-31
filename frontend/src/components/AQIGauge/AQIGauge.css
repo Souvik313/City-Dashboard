@@ -1,0 +1,254 @@
+/* AQI Gauge Component Styles */
+
+.aqi-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+}
+
+.aqi-gauge-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aqi-gauge-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.aqi-gauge-bg {
+  fill: none;
+  stroke: var(--border, #e2e8f0);
+  stroke-width: 8;
+  transition: stroke 0.3s ease;
+}
+
+.aqi-gauge-progress {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 282.7;
+  transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.aqi-gauge-content {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.aqi-gauge-value {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: var(--text, #111827);
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.aqi-gauge-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted, #94a3b8);
+}
+
+.aqi-gauge-category {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-top: 4px;
+  transition: all 0.3s ease;
+}
+
+.aqi-gauge-category.good {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.aqi-gauge-category.moderate {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+}
+
+.aqi-gauge-category.unhealthy-for-sensitive-groups {
+  background: rgba(249, 115, 22, 0.1);
+  color: #f97316;
+}
+
+.aqi-gauge-category.unhealthy {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.aqi-gauge-category.very-unhealthy {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+}
+
+.aqi-gauge-category.hazardous {
+  background: rgba(124, 45, 18, 0.8);
+  color: #fca5a5;
+}
+
+.aqi-gauge-glow {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.aqi-gauge-glow.warning {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 0.7;
+  }
+  50% {
+    box-shadow: 0 0 0 15px transparent;
+    opacity: 0.3;
+  }
+}
+
+/* AQI Scale Reference */
+.aqi-gauge-scale {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.aqi-scale-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  transition: transform 0.2s ease;
+}
+
+.aqi-scale-item:hover {
+  transform: scale(1.1);
+}
+
+.aqi-scale-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 4px currentColor;
+}
+
+.aqi-scale-text {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Dark mode support */
+html.dark .aqi-gauge-value {
+  color: var(--text, #f0f0f8);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+html.dark .aqi-gauge-bg {
+  stroke: var(--border, #2e2e42);
+}
+
+html.dark .aqi-gauge-scale-item {
+  color: var(--text-secondary, #c4c4d8);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .aqi-gauge-container {
+    padding: 16px;
+  }
+
+  .aqi-gauge-wrapper {
+    width: 150px;
+    height: 150px;
+  }
+
+  .aqi-gauge-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .aqi-gauge-glow {
+    width: 150px;
+    height: 150px;
+  }
+
+  .aqi-gauge-value {
+    font-size: 2.2rem;
+  }
+
+  .aqi-gauge-scale {
+    gap: 8px;
+  }
+
+  .aqi-scale-item {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .aqi-gauge-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
+  .aqi-gauge-glow {
+    width: 120px;
+    height: 120px;
+  }
+
+  .aqi-gauge-value {
+    font-size: 1.8rem;
+  }
+
+  .aqi-gauge-label {
+    font-size: 0.6rem;
+  }
+
+  .aqi-gauge-scale {
+    gap: 6px;
+  }
+}
