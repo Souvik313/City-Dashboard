@@ -110,7 +110,7 @@ export const getLatestAQIByCity = catchAsync(async (req, res, next) => {
       lastFetchedAt: new Date()
     });
   }
-    latestAQI = AQIData.create({
+    latestAQI = await AQIData.create({
       city: cityDoc._id,
       source: dataSource._id,
       pollutants: AQI.pollutants,

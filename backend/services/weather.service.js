@@ -102,8 +102,8 @@ export const fetchAndStoreWeatherForCity = async (cityName) => {
   await WeatherData.create({
     city: cityDoc._id,
     source: dataSource._id,
-    temperature: weather.temperature,
-    feelsLike: weather.feelsLike ?? null,
+    temperature: Math.round(weather.temperature * 10) / 10,
+    feelsLike: weather.feelsLike != null ? Math.round(weather.feelsLike * 10) / 10 : null,
     humidity: weather.humidity ?? null,
     pressure: weather.pressure ?? null,
     wind: weather.windSpeed || weather.windDirection ? {

@@ -32,6 +32,9 @@ import Chat from "../../components/Chat/Chat.jsx";
 import IncidentReport from "../../components/IncidentReport/IncidentReport.jsx";
 import CityHeatmap from "../../components/CityHeatmap/CityHeatmap.jsx";
 import SentimentPanel from "../../components/SentimentPanel/SentimentPanel.jsx";
+import AQIGauge from "../../components/AqiGauge/AqiGauge.jsx";
+import OutdoorActivities from "../../components/OutdoorActivities/OutdoorActivities.jsx";
+import PollutantBars from "../../components/PollutantBars/PollutantBars.jsx";
 import Groq from "groq-sdk";
 const API_URL = "http://localhost:5000";
 
@@ -77,6 +80,116 @@ const groq = new Groq({
               }
 };
 
+  const getWeatherAdviceInfo = async (weatherData) => {
+    try {
+      if (!weatherData) {
+        return {
+          summary: ["Weather data unavailable."],
+          actions: ["Wait for weather data to load."]
+        };
+      }
+
+      const condition = weatherData.condition?.description || "Unknown";
+      const temp = weatherData.temperature ?? "N/A";
+      const humidity = weatherData.humidity ?? "N/A";
+      const wind = weatherData.wind?.speed ?? "N/A";
+      const visibility = weatherData.visibility ? (weatherData.visibility / 1000).toFixed(1) : "N/A";
+
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: 400,
+        messages: [
+          {
+            role: "user",
+            content: `You are a weather advisor. Given current weather conditions, provide concise AI-generated advice.
+
+            Current Conditions:
+            - Condition: ${condition}
+            - Temperature: ${temp}°C
+            - Humidity: ${humidity}%
+            - Wind Speed: ${wind} km/h
+            - Visibility: ${visibility} km
+
+            Respond ONLY with a valid JSON object in this exact format, no markdown, no extra text:
+            {
+              "summary": ["point1", "point2", "point3"],
+              "actions": ["action1", "action2", "action3", "action4"]
+            }
+
+            - summary: max 3 bullet points describing current weather impact
+            - actions: max 4 bullet points with recommended actions
+            Keep each point concise (under 12 words).`,
+          },
+        ]
+      });
+
+      const text = response.choices[0].message.content.trim();
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("Groq weather advice failed:", err);
+      return {
+        summary: ["Weather data received.", "Check local conditions."],
+        actions: ["Dress appropriately.", "Stay hydrated.", "Monitor forecasts."]
+      };
+    }
+  };
+
+  const getTrafficAdviceInfo = async (trafficData) => {
+    try {
+      if (!trafficData) {
+        return {
+          summary: ["Traffic data unavailable."],
+          guidance: ["Wait for traffic data to load."]
+        };
+      }
+
+      const congestion = trafficData.congestion?.level || "Unknown";
+      const avgSpeed = trafficData.speed?.average ?? "N/A";
+      const freeFlow = trafficData.speed?.freeFlow ?? "N/A";
+      const travelTimeIndex = trafficData.congestion?.travelTimeIndex ?? "N/A";
+      const hotspots = trafficData.hotspots?.length ?? 0;
+      const closures = trafficData.roadClosureCount ?? 0;
+
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: 350,
+        messages: [
+          {
+            role: "user",
+            content: `You are a traffic advisor. Given current traffic conditions, provide concise AI-generated advice.
+
+            Current Conditions:
+            - Congestion Level: ${congestion}
+            - Average Speed: ${avgSpeed} km/h
+            - Free Flow Speed: ${freeFlow} km/h
+            - Travel Time Index: ${travelTimeIndex}
+            - Active Hotspots: ${hotspots}
+            - Road Closures: ${closures}
+
+            Respond ONLY with a valid JSON object in this exact format, no markdown, no extra text:
+            {
+              "summary": ["point1", "point2", "point3"],
+              "guidance": ["sentence1", "sentence2", "sentence3"]
+            }
+
+            - summary: max 3 bullet points assessing current traffic conditions
+            - guidance: max 3 full sentences with actionable travel recommendations
+            Keep guidance as complete sentences (15-20 words each).`,
+          },
+        ]
+      });
+
+      const text = response.choices[0].message.content.trim();
+      return JSON.parse(text);
+    } catch (err) {
+      console.error("Groq traffic advice failed:", err);
+      return {
+        summary: ["Traffic data received.", "Monitor conditions."],
+        guidance: ["Check live traffic updates before commuting.", "Consider alternate routes if delays increase.", "Allow extra time during peak hours."]
+      };
+    }
+  };
+
 export default function Dashboard() {
   const [inputCity, setInputCity] = useState("");
   const [selectedCity , setSelectedCity] = useState(null);
@@ -88,6 +201,8 @@ export default function Dashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [darkMode , setDarkMode] = useState(false);
   const [riskInfo , setRiskInfo] = useState(null);
+  const [weatherAdviceInfo, setWeatherAdviceInfo] = useState(null);
+  const [trafficAdviceInfo, setTrafficAdviceInfo] = useState(null);
 
 
   const weatherIconMap = {
@@ -112,6 +227,121 @@ export default function Dashboard() {
   const getWeatherIcon = (conditionMain) => {
     const key = String(conditionMain || '').toLowerCase();
     return weatherIconMap[key] || weatherUnknownIcon;
+  };
+
+  const getWindDirectionLabel = (deg) => {
+    if (deg == null || Number.isNaN(deg)) return null;
+    const directions = [
+      'N','NNE','NE','ENE','E','ESE','SE','SSE',
+      'S','SSW','SW','WSW','W','WNW','NW','NNW'
+    ];
+    return directions[Math.floor(((deg % 360) / 22.5) + 0.5) % 16];
+  };
+
+  const formatVisibility = (meters) => {
+    if (meters == null || meters === "") return "—";
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  const getTemperatureLabel = (temp) => {
+    if (temp == null || Number.isNaN(temp)) return "Unavailable";
+    if (temp <= 15) return "Low";
+    if (temp <= 28) return "Moderate";
+    return "High";
+  };
+
+  const getWeatherMetricStatus = (metric, value, weatherData) => {
+    if (value == null || value === "" || Number.isNaN(value)) return "unsafe";
+    switch (metric) {
+      case "temperature":
+      case "feelsLike": {
+        const numeric = Number(value);
+        return numeric > 15 && numeric <= 28 ? "safe" : "unsafe";
+      }
+      case "condition": {
+        const condition = String(weatherData?.condition?.main || "").toLowerCase();
+        return /rain|storm|thunder|snow|drizzle|sleet|hail/.test(condition) ? "unsafe" : "safe";
+      }
+      case "humidity": {
+        const numeric = Number(value);
+        return numeric >= 30 && numeric <= 70 ? "safe" : "unsafe";
+      }
+      case "wind": {
+        const numeric = Number(value);
+        return numeric <= 20 ? "safe" : "unsafe";
+      }
+      case "pressure": {
+        const numeric = Number(value);
+        return numeric >= 980 && numeric <= 1030 ? "safe" : "unsafe";
+      }
+      case "visibility": {
+        const numeric = Number(weatherData?.visibility ?? value);
+        return numeric >= 5000 ? "safe" : "unsafe";
+      }
+      case "cloudCover": {
+        const numeric = Number(value);
+        return numeric <= 80 ? "safe" : "unsafe";
+      }
+      default:
+        return "unsafe";
+    }
+  };
+
+  const getTrafficMetricStatus = (metric, value, trafficData) => {
+    if (value == null || value === '') return 'unsafe';
+    const valueStr = String(value).trim().toLowerCase();
+    const numericCandidate = Number(valueStr.replace('%', ''));
+    const numeric = Number.isNaN(numericCandidate) ? Number(value) : numericCandidate;
+    switch (metric) {
+      case 'congestion': {
+        // Support both categorical values ('low','moderate','high') and numeric percentages
+        if (!Number.isNaN(numeric)) {
+          if (numeric <= 30) return 'safe';
+          if (numeric <= 60) return 'moderate';
+          return 'unsafe';
+        }
+        if (valueStr === 'low' || valueStr === 'free') return 'safe';
+        if (valueStr === 'moderate' || valueStr === 'medium') return 'moderate';
+        if (valueStr === 'high' || valueStr === 'severe') return 'unsafe';
+        return 'moderate';
+      }
+      case 'avgSpeed': {
+        const freeFlow = Number(trafficData?.speed?.freeFlow) || 60;
+        if (numeric >= freeFlow * 0.9) return 'safe';
+        if (numeric >= freeFlow * 0.6) return 'moderate';
+        return 'unsafe';
+      }
+      case 'freeFlow': return 'safe';
+      case 'travelTimeIndex': {
+        if (numeric < 0.5) return 'safe';
+        if (numeric < 0.8) return 'moderate';
+        return 'unsafe';
+      }
+      case 'hotspotCount': {
+        if (numeric === 0) return 'safe';
+        if (numeric <= 3) return 'moderate';
+        return 'unsafe';
+      }
+      case 'roadClosures': {
+        if (numeric === 0) return 'safe';
+        if (numeric === 1) return 'moderate';
+        return 'unsafe';
+      }
+      case 'confidence': {
+        if (numeric >= 0.8) return 'safe';
+        if (numeric >= 0.6) return 'moderate';
+        return 'unsafe';
+      }
+      default:
+        return 'moderate';
+    }
+  };
+
+  const formatTravelTimeIndex = (value) => {
+    if (value == null || value === "") return '—';
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return '—';
+    return numeric < 1 ? numeric.toFixed(1) : numeric.toFixed(2);
   };
 
   const getHealthStatus = (score) => {
@@ -173,32 +403,98 @@ export default function Dashboard() {
               {weather.loading && <div className="skeleton">Loading weather…</div>}
               {weather.error && <div className="error">Weather error: {weather.error}</div>}
               {weather.data && (
-                <div className="topic-card">
-                  <img
-                    src={getWeatherIcon(weather.data.condition?.main)}
-                    alt={weather.data.condition?.description || 'Current weather'}
-                    className="weather-cond"
-                  />
-                  <div className="metric-row">
-                    <div className="metric">
-                      <strong>{weather.data.temperature}°C</strong>
-                      <span>Temperature</span>
+                <div className="topic-card weather-card">
+                  <div className="weather-main-grid">
+                    <div className="weather-icon-block">
+                      <img
+                        src={getWeatherIcon(weather.data.condition?.main)}
+                        alt={weather.data.condition?.description || 'Current weather'}
+                        className="weather-cond"
+                      />
                     </div>
-                    <div className="metric">
-                      <strong>{weather.data.condition?.description || '—'}</strong>
-                      <span>Condition</span>
-                    </div>
-                    <div className="metric">
-                      <strong>{weather.data.humidity ?? '—'}</strong>
-                      <span>Humidity</span>
-                    </div>
-                    <div className="metric">
-                      <strong>{weather.data.wind?.speed || '—'}</strong>
-                      <span>Wind speed</span>
+                    <div className="weather-stat-grid">
+                      <div className="metric-row">
+                        <div className={`metric ${getWeatherMetricStatus("temperature", weather.data.temperature, weather.data)}`}>
+                          <div className="metric-header">
+                            <strong>{weather.data.temperature ?? '—'}°C</strong>
+                            <span className="metric-caption">{getTemperatureLabel(weather.data.temperature)}</span>
+                          </div>
+                          <span>Temperature</span>
+                        </div>
+                        <div className={`metric ${getWeatherMetricStatus("condition", weather.data.condition?.main, weather.data)}`}>
+                          <strong>{weather.data.condition?.description || '—'}</strong>
+                          <span>Condition</span>
+                        </div>
+                        <div className={`metric ${getWeatherMetricStatus("humidity", weather.data.humidity, weather.data)}`}>
+                          <strong>{weather.data.humidity ?? '—'}%</strong>
+                          <span>Humidity</span>
+                        </div>
+                        <div className={`metric ${getWeatherMetricStatus("wind", weather.data.wind?.speed, weather.data)}`}>
+                          <strong>{weather.data.wind?.speed ?? '—'} km/h</strong>
+                          <span>Wind {getWindDirectionLabel(weather.data.wind?.direction) || ''}</span>
+                        </div>
+                      </div>
+
+                      <div className="weather-detail-grid">
+                        <div className={`detail-card ${getWeatherMetricStatus("pressure", weather.data.pressure, weather.data)}`}>
+                          <span>Pressure</span>
+                          <strong>{weather.data.pressure ?? '—'} hPa</strong>
+                        </div>
+                        <div className={`detail-card ${getWeatherMetricStatus("visibility", weather.data.visibility, weather.data)}`}>
+                          <span>Visibility</span>
+                          <strong>{formatVisibility(weather.data.visibility)}</strong>
+                        </div>
+                        <div className={`detail-card ${getWeatherMetricStatus("cloudCover", weather.data.cloudCover, weather.data)}`}>
+                          <span>Cloud cover</span>
+                          <strong>{weather.data.cloudCover ?? '—'}%</strong>
+                        </div>
+                      </div>
+
+                      <div className="weather-explanation-grid">
+                        <div className="explanation-card">
+                          <strong>What each metric means</strong>
+                          <ul>
+                            <li><strong>Pressure</strong> – atmospheric pressure; falling pressure often signals weather changes.</li>
+                            <li><strong>Visibility</strong> – how far you can see; low visibility warns of fog or heavy rain.</li>
+                            <li><strong>Cloud cover</strong> – percentage of sky covered by clouds; affects temperature and sunlight.</li>
+                          </ul>
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  <div className="weather-advice-grid">
+                    {!weatherAdviceInfo ? (
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="advice-card">
+                          <strong>Weather summary</strong>
+                          <ul>
+                            {(weatherAdviceInfo.summary || []).map((point) => (
+                              <li key={point}>{point}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="advice-card">
+                          <strong>Recommended actions</strong>
+                          <ul>
+                            {(weatherAdviceInfo.actions || []).map((action) => (
+                              <li key={action}>{action}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <p className="forecast-note">*Green highlights indicate safer weather for the next hour; red highlights indicate conditions that may be uncomfortable or unsafe during that period.*</p>
                 </div>
+                
               )}
+              
               <PredictionInsight
                 title="Next-hour weather forecast"
                 loading={weatherPrediction.loading}
@@ -206,6 +502,7 @@ export default function Dashboard() {
                 fallback={weatherPrediction.data?.fallback}
                 timestamp={weatherPrediction.data?.timestamp}
               >
+                
                 {weatherPrediction.data && (
                   <div className="prediction-metrics">
                     <div className="prediction-metric">
@@ -243,38 +540,108 @@ export default function Dashboard() {
               {traffic.loading && <div className="skeleton">Loading traffic…</div>}
               {traffic.error && <div className="error">Traffic error: {traffic.error}</div>}
               {traffic.data && (
-                <div className="topic-card">
+                <div className="topic-card traffic-card">
                   <div className="metric-row">
-                    <div className="metric">
+                    <div className={`metric ${getTrafficMetricStatus('congestion', traffic.data.congestion.level, traffic.data)}`}>
                       <strong>{traffic.data.congestion.level}</strong>
                       <span>Congestion</span>
                     </div>
-                    <div className="metric">
+                    <div className={`metric ${getTrafficMetricStatus('avgSpeed', traffic.data.speed.average, traffic.data)}`}>
                       <strong>{traffic.data.speed.average ?? '—'}</strong>
-                      <span>Average speed</span>
+                      <span>Avg speed (km/h)</span>
                     </div>
-                    <div className="metric">
-                      <strong>{traffic.data.roadClosureCount}</strong>
-                      <span>Road closures</span>
+                    <div className={`metric ${getTrafficMetricStatus('freeFlow', traffic.data.speed.freeFlow, traffic.data)}`}>
+                      <strong>{traffic.data.speed.freeFlow ?? '—'}</strong>
+                      <span>Free flow</span>
+                    </div>
+                    <div className={`metric ${getTrafficMetricStatus('travelTimeIndex', traffic.data.congestion.travelTimeIndex, traffic.data)}`}>
+                      <strong>{formatTravelTimeIndex(traffic.data.congestion.travelTimeIndex)}</strong>
+                      <span>Travel time index</span>
                     </div>
                   </div>
-                  <div className="hotspots-panel">
-                    <strong>Top hotspot</strong>
-                    {traffic.data.hotspots && traffic.data.hotspots.length > 0 ? (
-                      <>
-                        <div className="hotspot-summary">
-                          {traffic.data.hotspots[0].roadName} • Delay {secToMin(traffic.data.hotspots[0].delaySeconds)} min
+
+                  <div className="traffic-detail-grid">
+                    <div className={`detail-card ${getTrafficMetricStatus('hotspotCount', traffic.data.hotspots?.length ?? 0, traffic.data)}`}>
+                      <span>Hotspot count</span>
+                      <strong>{traffic.data.hotspots?.length ?? 0}</strong>
+                    </div>
+                    <div className={`detail-card ${getTrafficMetricStatus('roadClosures', traffic.data.roadClosureCount, traffic.data)}`}>
+                      <span>Road closures</span>
+                      <strong>{traffic.data.roadClosureCount}</strong>
+                    </div>
+                    <div className={`detail-card ${getTrafficMetricStatus('confidence', traffic.data.ingestionMeta?.confidence, traffic.data)}`}>
+                      <span>Confidence</span>
+                      <strong>{traffic.data.ingestionMeta?.confidence != null ? `${Math.round(traffic.data.ingestionMeta.confidence * 100)}%` : '—'}</strong>
+                    </div>
+                  </div>
+
+                  <div className="traffic-explanation-grid">
+                    <div className="explanation-card">
+                      <strong>What each metric means</strong>
+                      <ul>
+                        <li><strong>Congestion</strong> – traffic intensity on main routes right now.</li>
+                        <li><strong>Avg speed</strong> – typical vehicle speed across the monitored area.</li>
+                        <li><strong>Free flow</strong> – expected speed when traffic is light.</li>
+                        <li><strong>Travel time index</strong> – how much longer trips take compared to free-flow conditions.</li>
+                        <li><strong>Hotspot count</strong> – number of locations with significant delay.</li>
+                        <li><strong>Confidence</strong> – how reliable the traffic estimate is.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {traffic.data.hotspots && traffic.data.hotspots.length > 0 ? (
+                    <div className="traffic-hotspot-list">
+                      <strong>Top hotspots</strong>
+                      {traffic.data.hotspots.slice(0, 2).map((hotspot, index) => (
+                        <div key={`${hotspot.roadName}-${index}`} className="traffic-hotspot">
+                          <div>
+                            <span>{hotspot.roadName || 'Unknown road'}</span>
+                            <small>{hotspot.severity >= 4 ? 'Severe delay' : 'Moderate delay'}</small>
+                          </div>
+                          <div>
+                            <strong>{secToMin(hotspot.delaySeconds)}</strong>
+                            <span>delay</span>
+                          </div>
                         </div>
-                        {traffic.data.hotspots.length > 1 && (
-                          <button className="show-more-btn" disabled={traffic.loading} onClick={() => setShowHotspotsModal(true)}>
-                            View all hotspots
-                          </button>
-                        )}
-                      </>
+                      ))}
+                      {traffic.data.hotspots.length > 2 && (
+                        <button className="show-more-btn" disabled={traffic.loading} onClick={() => setShowHotspotsModal(true)}>
+                          View all hotspots
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="muted">No major hotspots detected.</div>
+                  )}
+
+                  <div className="traffic-advice-grid">
+                    {!trafficAdviceInfo ? (
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </div>
                     ) : (
-                      <div className="muted">No major hotspots detected.</div>
+                      <>
+                        <div className="advice-card">
+                          <strong>Traffic summary</strong>
+                          <ul>
+                            {(trafficAdviceInfo.summary || []).map((point) => (
+                              <li key={point}>{point}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="advice-card">
+                          <strong>Travel guidance</strong>
+                          <ul>
+                            {(trafficAdviceInfo.guidance || []).map((sentence) => (
+                              <li key={sentence}>{sentence}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
                     )}
                   </div>
+                  <p className="forecast-note">*Green highlights indicate safer traffic for the next hour; red highlights indicate conditions that may be uncomfortable or unsafe during that period.*</p>
                 </div>
               )}
               <PredictionInsight
@@ -304,7 +671,7 @@ export default function Dashboard() {
                         )}
                     </div>
                     <div className="prediction-metric">
-                      <strong>{trafficPrediction.data.travelTimeIndex ?? "—"}</strong>
+                      <strong>{formatTravelTimeIndex(trafficPrediction.data.travelTimeIndex)}</strong>
                       <span>Travel time index</span>
                     </div>
                   </div>
@@ -361,60 +728,31 @@ export default function Dashboard() {
               {aqi.data && (
                 <div className="topic-card air-card">
                   <div className="aqi-overview-panel">
-                    <div className="aqi-summary">
-                      <div className="aqi-value">
-                        <span className="value">{aqi.data.aqiValue}</span>
-                        <span className="label">AQI</span>
-                      </div>
-                      <div className="aqi-summary-detail">
-                        <span className={`aqi-badge ${aqi.data.category?.toLowerCase().replace(/ /g, "-")}`}>
-                          {aqiBadge(aqi.data.category)}
-                        </span>
-                        <p className="aqi-summary-copy">
-                          Current air quality is <strong>{aqi.data.category || "Unknown"}</strong>. This gives a quick view of city-wide risk.
-                        </p>
+                  <div className="aqi-top-row">
+                    <AQIGauge value={aqi.data.aqiValue} />
+                    <div className="aqi-top-detail">
+                      <span className={`aqi-badge ${aqi.data.category?.toLowerCase().replace(/ /g, "-")}`}>
+                        {aqiBadge(aqi.data.category)}
+                      </span>
+                      <p className="aqi-summary-copy">
+                        Current air quality is <strong>{aqi.data.category || "Unknown"}</strong>. This gives a quick view of city-wide risk.
+                      </p>
+                      <div className="aqi-quick-insights">
+                        <div className="aqi-quick-card">
+                          <span>Dominant pollutant</span>
+                          <strong>{(aqi.data.dominantPollutant || "unknown").toUpperCase()}</strong>
+                          <p>Most likely driver of current AQI risk.</p>
+                        </div>
+                        <div className="aqi-quick-card">
+                          <span>Risk level</span>
+                          <strong>{aqi.data.category || "Moderate"}</strong>
+                          <p>{aqi.data.healthImpact || "Monitor local conditions and reduce exposure if needed."}</p>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="aqi-quick-insights">
-                      <div className="aqi-quick-card">
-                        <span>Dominant pollutant</span>
-                        <strong>{(aqi.data.dominantPollutant || "unknown").toUpperCase()}</strong>
-                        <p>Most likely driver of current AQI risk.</p>
-                      </div>
-                      <div className="aqi-quick-card">
-                        <span>Risk level</span>
-                        <strong>{aqi.data.category || "Moderate"}</strong>
-                        <p>{aqi.data.healthImpact || "Monitor local conditions and reduce exposure if needed."}</p>
-                      </div>
-                    </div>
-
-                    <div className="aqi-metrics-grid">
-                      <div className="pollutant-card">
-                        <span>PM2.5</span>
-                        <strong>{aqi.data.pollutants?.pm25 ?? "—"}</strong>
-                      </div>
-                      <div className="pollutant-card">
-                        <span>PM10</span>
-                        <strong>{aqi.data.pollutants?.pm10 ?? "—"}</strong>
-                      </div>
-                      <div className="pollutant-card">
-                        <span>NO₂</span>
-                        <strong>{aqi.data.pollutants?.no2 ?? "—"}</strong>
-                      </div>
-                      <div className="pollutant-card">
-                        <span>SO₂</span>
-                        <strong>{aqi.data.pollutants?.so2 ?? "—"}</strong>
-                      </div>
-                      <div className="pollutant-card">
-                        <span>O₃</span>
-                        <strong>{aqi.data.pollutants?.o3 ?? "—"}</strong>
-                      </div>
-                      <div className="pollutant-card">
-                        <span>CO</span>
-                        <strong>{aqi.data.pollutants?.co ?? "—"}</strong>
-                      </div>
-                    </div>
+                    <PollutantBars pollutants={aqi.data.pollutants} />
 
                     {!riskInfo ? (<div className="animate-pulse space-y-2">
                         <div className="h-4 bg-gray-200 rounded w-3/4" />
@@ -444,9 +782,7 @@ export default function Dashboard() {
                     </div>
                     </div>)}
 
-                    <button className="analyze-btn" disabled={aqi.loading} onClick={() => setShowAqiTrendsModal(true)}>
-                      Analyze latest trends
-                    </button>
+                    <OutdoorActivities aqiValue={aqi.data.aqiValue} />
                   </div>
                 </div>
               )}
@@ -716,6 +1052,18 @@ export default function Dashboard() {
     setRiskInfo(null); // reset risk info when AQI changes
     getAQIRiskInfo(aqiCategory, aqiValue).then(info => setRiskInfo(info));
   }, [aqiCategory, aqiValue]);
+
+  useEffect(() => {
+    if (!weather.data) return;
+    setWeatherAdviceInfo(null); // reset weather advice when weather changes
+    getWeatherAdviceInfo(weather.data).then(info => setWeatherAdviceInfo(info));
+  }, [weather.data]);
+
+  useEffect(() => {
+    if (!traffic.data) return;
+    setTrafficAdviceInfo(null); // reset traffic advice when traffic changes
+    getTrafficAdviceInfo(traffic.data).then(info => setTrafficAdviceInfo(info));
+  }, [traffic.data]);
 
   const secToMin = (seconds) => {
     if (typeof seconds !== "number" || seconds < 0) return "—";

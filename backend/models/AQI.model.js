@@ -38,6 +38,11 @@ const aqiSchema = new mongoose.Schema({
             min: 0
         }
     },
+    dominantPollutant: {
+        type: String,
+        trim: true,
+        default: null
+    },
     aqiValue: {
         type: Number,
         required: true,
