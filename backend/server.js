@@ -19,6 +19,10 @@ import alertsRouter from './routes/alerts.routes.js';
 import preferencesRouter from './routes/preferences.routes.js';
 import './jobs/aqiPoller.js'; // Import the AQI poller to start it when the server runs
 import './jobs/weatherPoller.js'; // Import the Weather poller to start it when the server runs
+<<<<<<< HEAD
+=======
+// import './jobs/transitPoller.js'; // Import the Transit poller to start it when the server runs
+>>>>>>> abc483a (public transport component full implementation)
 // import './jobs/trafficPoller.js';
 
 dotenv.config();

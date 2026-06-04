@@ -828,6 +828,111 @@ export default function Dashboard() {
             </div>
           </div>
         );
+<<<<<<< HEAD
+=======
+
+        case 'public transport':
+          return (
+  <div className="topic-panel">
+    <div className="topic-section">
+      <h3>Public transport overview</h3>
+
+      {transit.loading && (
+        <div className="skeleton">
+          Loading transit data…
+        </div>
+      )}
+
+      {transit.error && (
+        <div className="error">
+          ⚠ {transit.error}
+        </div>
+      )}
+
+      {transit.data && (
+        <div className="topic-card transit-card">
+          <div className="transit-overview-panel">
+
+            <div className="transit-top-row">
+
+              <div className="transit-score-card">
+                <span className="transit-label">
+                  Transit Network Status
+                </span>
+
+                <strong>
+                  {transitStats.data?.totalRoutes ?? '-'} Routes
+                </strong>
+
+                <p>
+                  Active public transport services currently operating in the city.
+                </p>
+              </div>
+
+              <div className="transit-top-detail">
+
+                <div className="transit-quick-insights">
+
+                  <div className="transit-quick-card">
+                    <span>Nearby Stops</span>
+                    <strong>
+                      {transitStats.data?.totalStops ?? '-'}
+                    </strong>
+                    <p>
+                      Public transport stops available nearby.
+                    </p>
+                  </div>
+
+                  <div className="transit-quick-card">
+                    <span>Average Delay</span>
+                    <strong>
+                     {typeof transitStats.data?.averageDelay === 'number'
+                      ? transitStats.data.averageDelay.toFixed(1)
+                      : '—'} min
+                    </strong>
+                    <p>
+                      Average delay across active routes.
+                    </p>
+                  </div>
+
+                  <div className="transit-quick-card">
+                    <span>Active Alerts</span>
+                    <strong>
+                      {transitStats.data?.activeAlerts ?? '-'}
+                    </strong>
+                    <p>
+                      Service disruptions and transit advisories.
+                    </p>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <TransitRoutesTable
+              routes={transit?.data?.routes || []}
+            />
+
+            <NearbyStopsList
+              stops={transit?.data?.nearbyStops || []}
+            />
+
+            <TransitAlertsPanel
+              alerts={transit?.data?.alerts || []}
+            />
+
+            <CrowdingDistributionChart 
+              routes={transit?.data?.routes || []}
+            />
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  </div>
+);
+>>>>>>> abc483a (public transport component full implementation)
     }
   };
 
