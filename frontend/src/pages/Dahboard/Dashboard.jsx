@@ -25,6 +25,11 @@ import weatherFogIcon from '../../assets/weather-fog.svg';
 import weatherHazeIcon from '../../assets/weather-haze.svg';
 import weatherWindIcon from '../../assets/weather-wind.svg';
 import weatherUnknownIcon from '../../assets/weather-unknown.svg';
+import transportIcon from '../../assets/transportIcon.png';
+import NearbyStopsList from "../../components/NearbyStopList/NearbyStopList.jsx";
+import TransitRoutesTable from "../../components/TransitRoutesTable/TransitRoutesTable.jsx";
+import TransitAlertsPanel from "../../components/TransitAlertsPanel/TransitAlertsPanel.jsx";
+import CrowdingDistChart from "../../components/CrowdingDistChart/CrowdingDistChart.jsx";
 import "./Dashboard.css";
 import "../../components/PredictionInsight/PredictionInsight.css";
 import Alerts from "../../components/Alerts/Alerts.jsx";
@@ -380,6 +385,7 @@ export default function Dashboard() {
     { id: 'sentiment', icon: sentimentIcon, label: 'Sentiment', description: 'Citizen mood pulse, chat trends, topics, and emotion analytics.' },
     { id: 'incidents', icon: incidentIcon, label: 'Incident Reports', description: 'Submit issues, view analytics, and track recent local reports.' },
     { id: 'heatmap', icon: heatmapIcon, label: 'Heatmap', description: 'Interactive city map with AQI, weather, traffic hotspots, and incident layers.' },
+    { id: 'public transport', icon: transportIcon, label: "Public Transport" , description: "Real-time transit status, routes, delays, crowding information and alerts."},
   ];
 
   const activeTopicMeta = topics.find((topic) => topic.id === activeTopic);
@@ -828,8 +834,8 @@ export default function Dashboard() {
             </div>
           </div>
         );
-<<<<<<< HEAD
-=======
+
+
 
         case 'public transport':
           return (
@@ -921,7 +927,7 @@ export default function Dashboard() {
               alerts={transit?.data?.alerts || []}
             />
 
-            <CrowdingDistributionChart 
+            <CrowdingDistChart 
               routes={transit?.data?.routes || []}
             />
 
@@ -932,7 +938,6 @@ export default function Dashboard() {
     </div>
   </div>
 );
->>>>>>> abc483a (public transport component full implementation)
     }
   };
 
@@ -995,6 +1000,8 @@ export default function Dashboard() {
     weather,
     traffic,
     cityPulse,
+    transit,
+    transitStats,
     refreshAll,
     globalLoading,
   } = useCityDashboard(cityName, { pollingInterval: 0, enabled: Boolean(cityName) });

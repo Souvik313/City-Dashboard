@@ -18,6 +18,8 @@ export default function useCityDashboard(
   const [weather, setWeather] = useState(createSection());
   const [traffic, setTraffic] = useState(createSection());
   const [cityPulse, setCityPulse] = useState(createSection());
+  const [transit , setTransit] = useState(createSection());
+  const [transitStats , setTransitStats] = useState(createSection());
 
 const fetchData = async (setState, endpoint) => {
   if (!city) return;
@@ -51,6 +53,8 @@ const fetchData = async (setState, endpoint) => {
     fetchData(setWeather, "weather/latest");
     fetchData(setTraffic, "traffic/latest");
     fetchData(setCityPulse, "citypulse");
+    fetchData(setTransit , "transit/latest");
+    fetchData(setTransitStats , "transit/stats");
   };
 
   useEffect(() => {
@@ -77,6 +81,8 @@ const fetchData = async (setState, endpoint) => {
     weather,
     traffic,
     cityPulse,
+    transit,
+    transitStats,
     refreshAll: fetchAll,
     refreshAqi: () => fetchData(setAqi, "aqi/latest"),
     refreshWeather: () => fetchData(setWeather, "weather/latest"),

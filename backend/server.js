@@ -17,12 +17,10 @@ import chatRouter from './routes/chat.routes.js';
 import incidentRouter from './routes/incident.routes.js';
 import alertsRouter from './routes/alerts.routes.js';
 import preferencesRouter from './routes/preferences.routes.js';
+import transitRouter from './routes/publicTransit.routes.js';
 import './jobs/aqiPoller.js'; // Import the AQI poller to start it when the server runs
 import './jobs/weatherPoller.js'; // Import the Weather poller to start it when the server runs
-<<<<<<< HEAD
-=======
-// import './jobs/transitPoller.js'; // Import the Transit poller to start it when the server runs
->>>>>>> abc483a (public transport component full implementation)
+
 // import './jobs/trafficPoller.js';
 
 dotenv.config();
@@ -43,6 +41,7 @@ app.use('/api/v1/alerts', alertsRouter);
 app.use('/api/v1/preferences', preferencesRouter);
 app.use("/api/v1/citypulse" , cityPulseRouter);
 app.use("/api/v1/chat" , chatRouter);
+app.use("/api/v1/transit" , transitRouter);
 app.get('/' , (req, res) => {
     res.send("Welcome to the social media api");
 });

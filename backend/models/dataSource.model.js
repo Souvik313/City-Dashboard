@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const dataSourceSchema = new mongoose.Schema({
     name: {
-<<<<<<< HEAD
-        enum: ["WAQI API", "OpenWeatherMap api", "TOMTOM api", "Chatbot"],
-=======
         enum: ["WAQI API", "OpenWeatherMap api", "TOMTOM api", "Chatbot" , "OpenTripPlanner API" , "transitland" , "mock"],
->>>>>>> abc483a (public transport component full implementation)
         type: String,
         required: true,
         trim: true
