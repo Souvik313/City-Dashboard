@@ -3510,3 +3510,52 @@ border: 1px solid rgba(59, 130, 246, 0.3);
   border-color: rgba(59, 130, 246, 0.6);
   color: #dbeafe;
 }
+/* =========================
+   Emergency overlay
+========================= */
+.emergency-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  animation: overlayIn 0.2s ease;
+}
+
+.emergency-overlay > .emergency-mode {
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* =========================
+   Emergency trigger button
+========================= */
+.emergency-mode-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1.5px solid rgba(224, 49, 49, 0.35);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.15s ease,
+              box-shadow 0.18s ease;
+}
+
+.emergency-mode-trigger:hover {
+  background: rgba(224, 49, 49, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(224, 49, 49, 0.2);
+}

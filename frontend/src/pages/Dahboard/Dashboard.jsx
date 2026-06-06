@@ -41,6 +41,7 @@ import AQIGauge from "../../components/AqiGauge/AqiGauge.jsx";
 import OutdoorActivities from "../../components/OutdoorActivities/OutdoorActivities.jsx";
 import PollutantBars from "../../components/PollutantBars/PollutantBars.jsx";
 import useUserLocation from "../../hooks/useUserLocation.js";
+import EmergencyMode from "../../components/EmergencyMode/EmergencyMode.jsx";
 import Groq from "groq-sdk";
 const API_URL = "http://localhost:5000";
 
@@ -209,6 +210,7 @@ export default function Dashboard() {
   const [riskInfo , setRiskInfo] = useState(null);
   const [weatherAdviceInfo, setWeatherAdviceInfo] = useState(null);
   const [trafficAdviceInfo, setTrafficAdviceInfo] = useState(null);
+  const [emergencyMode, setEmergencyMode] = useState(false);
 
   const { userLocation, error: locationError,
         loading: locationLoading,
@@ -1298,6 +1300,13 @@ export default function Dashboard() {
                   </svg>
                 )}
           </button>
+          <button
+            className="emergency-mode-trigger"
+            onClick={() => setEmergencyMode(true)}
+            aria-label="Activate emergency mode"
+          >
+            🚨 Emergency
+          </button>
           <Alerts city={selectedCity} />
           <button
             className="btn-exit"
@@ -1489,6 +1498,11 @@ export default function Dashboard() {
             onClose={() => setShowSentimentTrendsModal(false)}
           />
         )}
+        {emergencyMode && (
+  <div className="emergency-overlay">
+    <EmergencyMode onExit={() => setEmergencyMode(false)} />
+  </div>
+)}
       </div>
     </>
   );

@@ -1,0 +1,491 @@
+/* =========================
+   Emergency Mode — Base
+========================= */
+.emergency-mode {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+  background: var(--card-bg);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 4px rgba(224, 49, 49, 0.08);
+  animation: emergencyIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes emergencyIn {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =========================
+   Emergency Mode — Header
+========================= */
+.emergency-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.emergency-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.emergency-title-row h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--danger);
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.emergency-badge-icon {
+  font-size: 1.6rem;
+  animation: pulse-icon 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emergency-badge-icon { animation: none; }
+}
+
+.emergency-location-tag {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.emergency-exit-btn {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1.5px solid rgba(224, 49, 49, 0.3);
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.15s ease;
+}
+
+.emergency-exit-btn:hover {
+  background: rgba(224, 49, 49, 0.15);
+  transform: translateY(-1px);
+}
+
+/* =========================
+   Emergency Mode — SOS Grid
+========================= */
+.sos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .sos-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sos-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-light);
+  border: 1.5px solid rgba(224, 49, 49, 0.25);
+  text-decoration: none;
+  transition: background 0.18s ease, transform 0.15s ease,
+              box-shadow 0.18s ease;
+  cursor: pointer;
+}
+
+.sos-card:hover {
+  background: rgba(224, 49, 49, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(224, 49, 49, 0.2);
+}
+
+.sos-card:active {
+  transform: translateY(0);
+}
+
+.sos-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.sos-card strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+.sos-card span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--danger);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* =========================
+   Emergency Mode — Location prompt
+========================= */
+.emergency-location-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 32px 24px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.emergency-location-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.emergency-location-prompt h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.emergency-location-prompt p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 420px;
+  margin: 0;
+}
+
+.emergency-location-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.15s ease;
+  box-shadow: 0 4px 14px rgba(224, 49, 49, 0.35);
+}
+
+.emergency-location-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.emergency-location-error {
+  font-size: 0.82rem;
+  color: var(--danger);
+  background: var(--danger-light);
+  padding: 8px 14px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(224, 49, 49, 0.2);
+}
+
+/* =========================
+   Emergency Mode — Locating state
+========================= */
+.emergency-locating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.emergency-pulse-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%       { transform: scale(1.5); opacity: 0.5; }
+}
+
+/* =========================
+   Emergency Mode — Filter bar
+========================= */
+.emergency-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emergency-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease, transform 0.15s ease;
+}
+
+.emergency-filter-btn:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.emergency-filter-btn.active {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.emergency-filter-icon { font-size: 1rem; line-height: 1; }
+.emergency-filter-label { font-size: 0.83rem; }
+
+.emergency-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.emergency-filter-btn.active .emergency-filter-count {
+  background: rgba(224, 49, 49, 0.15);
+  color: var(--danger);
+}
+
+/* =========================
+   Emergency Mode — Places grid
+========================= */
+.emergency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+/* =========================
+   Emergency Mode — Place card
+========================= */
+.emergency-place-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.emergency-place-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+/* color variants */
+.emergency-red    { border-left: 4px solid var(--danger);  }
+.emergency-blue   { border-left: 4px solid #3b82f6;        }
+.emergency-orange { border-left: 4px solid var(--warning); }
+.emergency-green  { border-left: 4px solid var(--success); }
+
+.emergency-place-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.emergency-place-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.emergency-place-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.emergency-place-info h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.emergency-place-type {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.emergency-place-distance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.emergency-place-distance strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.emergency-place-distance span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.emergency-place-address,
+.emergency-place-hours {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* =========================
+   Emergency Mode — Place actions
+========================= */
+.emergency-place-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.emergency-action-btn {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: var(--radius-xs);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.18s ease, transform 0.15s ease;
+  text-align: center;
+}
+
+.emergency-action-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.emergency-action-btn.directions {
+  background: #4f6ef7;
+  color: white;
+}
+
+.emergency-action-btn.call {
+  background: var(--success);
+  color: white;
+}
+
+/* =========================
+   Emergency Mode — Error + Empty
+========================= */
+.emergency-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--danger-light);
+  border: 1px solid rgba(224, 49, 49, 0.2);
+  border-radius: var(--radius-xs);
+  font-size: 0.875rem;
+  color: var(--danger);
+}
+
+.emergency-retry-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius-xs);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
+}
+
+.emergency-retry-btn:hover { opacity: 0.88; }
+
+.emergency-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.emergency-empty span { font-size: 2rem; }
+
+/* =========================
+   Emergency Mode — Skeleton
+========================= */
+.emergency-card-skeleton {
+  pointer-events: none;
+}
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 600px) {
+  .emergency-mode    { padding: 16px; gap: 18px; }
+  .emergency-grid    { grid-template-columns: 1fr; }
+  .emergency-filter-bar { gap: 6px; }
+  .emergency-filter-btn { padding: 8px 12px; font-size: 0.78rem; }
+  .emergency-title-row h2 { font-size: 1.2rem; }
+}

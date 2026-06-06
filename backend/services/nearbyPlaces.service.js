@@ -134,58 +134,71 @@ const getDistanceKm = (lat1, lon1, lat2, lon2) => {
 };
 
 export const fetchNearbyEmergencyPlaces = async (lat, lon, type = "all") => {
+
+  const OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  ];
+
   const queryBody = EMERGENCY_QUERIES[type] || EMERGENCY_QUERIES.all;
 
   const query = `
-    [out:json][timeout:20];
+    [out:json][timeout:15];
     (
       ${queryBody.replaceAll("LAT", lat).replaceAll("LON", lon)}
     );
     out body;
   `;
 
-  try {
-    const res = await axios.post(
-      OVERPASS_URL,
-      `data=${encodeURIComponent(query)}`,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "CityPulse/1.0"
-        },
-        timeout: 25000
-      }
-    );
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await axios.post(
+        endpoint,
+        `data=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "CityPulse/1.0"
+          },
+          timeout: 20000
+        }
+      );
 
-    const elements = res.data?.elements || [];
+      const elements = res.data?.elements || [];
+      console.log(`✅ Emergency places (${endpoint}): ${elements.length}`);
 
-    return elements
-      .filter((el) => el.tags?.name)   // skip unnamed places
-      .map((el) => ({
-        id:       `osm_${el.id}`,
-        name:     el.tags.name,
-        type:     el.tags.amenity,
-        lat:      el.lat,
-        lon:      el.lon,
-        distance: parseFloat(
-          getDistanceKm(lat, lon, el.lat, el.lon).toFixed(2)
-        ),
-        phone:    el.tags?.phone ||
-                  el.tags?.["contact:phone"] || null,
-        address:  [
-          el.tags?.["addr:housenumber"],
-          el.tags?.["addr:street"],
-          el.tags?.["addr:suburb"]
-        ].filter(Boolean).join(", ") || null,
-        openingHours: el.tags?.opening_hours || null,
-      }))
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 10);
+      return elements
+        .filter((el) => el.tags?.name)
+        .map((el) => ({
+          id:       `osm_${el.id}`,
+          name:     el.tags.name,
+          type:     el.tags.amenity,
+          lat:      el.lat,
+          lon:      el.lon,
+          distance: parseFloat(
+            getDistanceKm(lat, lon, el.lat, el.lon).toFixed(2)
+          ),
+          phone:    el.tags?.phone ||
+                    el.tags?.["contact:phone"] || null,
+          address:  [
+            el.tags?.["addr:housenumber"],
+            el.tags?.["addr:street"],
+            el.tags?.["addr:suburb"]
+          ].filter(Boolean).join(", ") || null,
+          openingHours: el.tags?.opening_hours || null,
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 10);
 
-  } catch (err) {
-    console.error("Nearby places Overpass error:", err.message);
-    return [];
+    } catch (err) {
+      console.warn(`Emergency Overpass failed (${endpoint}): ${err.message}`);
+      // try next endpoint
+    }
   }
+
+  console.error("All Overpass endpoints failed for emergency places");
+  return [];
 };
 
 export const fetchNearbyTransitStops = async (lat, lon) => {
