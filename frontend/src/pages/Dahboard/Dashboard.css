@@ -3355,3 +3355,158 @@ html.dark .crowd-pill.full {
   line-height: 1;
   flex-shrink: 0;
 }
+
+/* =========================
+   Transit — Near Me bar
+========================= */
+.transit-nearme-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.transit-nearme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease, transform 0.15s ease;
+}
+
+.transit-nearme-btn:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.transit-nearme-btn.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.transit-nearme-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =========================
+   Transit — Near Me badge
+========================= */
+.nearme-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid var(--primary-dim);
+}
+
+@media (max-width: 600px) {
+  .transit-nearme-bar {
+    flex-direction: column;
+  }
+
+  .transit-nearme-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.transit-nearme-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--danger-light);
+  border: 1px solid rgba(224, 49, 49, 0.2);
+  border-radius: var(--radius-xs);
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+/* =========================
+   Transit — Stops skeleton
+========================= */
+.transit-stops-skeleton {
+  display: grid;
+  gap: 14px;
+}
+
+.transit-skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.stop-card-skeleton {
+  gap: 10px;
+  pointer-events: none;
+}
+
+/* =========================
+   Transit — Routes skeleton
+========================= */
+.transit-routes-skeleton {
+  display: grid;
+  gap: 14px;
+}
+
+.table-row-skeleton {
+  pointer-events: none;
+}
+
+/* Light mode */
+.directions-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #5b7cfa;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.directions-btn:hover {
+  background: #507aec;
+  transform: translateY(-1px);
+}
+
+.directions-btn:active {
+  transform: translateY(0);
+}
+
+.stop-actions {
+  margin-top: 12px;
+}
+
+.dark-mode .directions-btn {
+  background: rgba(59, 130, 246, 0.08);
+color: #93c5fd;
+border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.dark-mode .directions-btn:hover {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #dbeafe;
+}

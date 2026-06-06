@@ -27,7 +27,7 @@ import weatherWindIcon from '../../assets/weather-wind.svg';
 import weatherUnknownIcon from '../../assets/weather-unknown.svg';
 import transportIcon from '../../assets/transportIcon.png';
 import NearbyStopsList from "../../components/NearbyStopList/NearbyStopList.jsx";
-import TransitRoutesTable from "../../components/TransitRoutesTable/TransitRoutesTable.jsx";
+import NearbyRoutesList from "../../components/NearbyRoutesList/NearbyRoutesList.jsx";
 import TransitAlertsPanel from "../../components/TransitAlertsPanel/TransitAlertsPanel.jsx";
 import CrowdingDistChart from "../../components/CrowdingDistChart/CrowdingDistChart.jsx";
 import "./Dashboard.css";
@@ -40,6 +40,7 @@ import SentimentPanel from "../../components/SentimentPanel/SentimentPanel.jsx";
 import AQIGauge from "../../components/AqiGauge/AqiGauge.jsx";
 import OutdoorActivities from "../../components/OutdoorActivities/OutdoorActivities.jsx";
 import PollutantBars from "../../components/PollutantBars/PollutantBars.jsx";
+import useUserLocation from "../../hooks/useUserLocation.js";
 import Groq from "groq-sdk";
 const API_URL = "http://localhost:5000";
 
@@ -209,6 +210,9 @@ export default function Dashboard() {
   const [weatherAdviceInfo, setWeatherAdviceInfo] = useState(null);
   const [trafficAdviceInfo, setTrafficAdviceInfo] = useState(null);
 
+  const { userLocation, error: locationError,
+        loading: locationLoading,
+        requestLocation, } = useUserLocation();
 
   const weatherIconMap = {
     clear: weatherClearIcon,
@@ -605,7 +609,7 @@ export default function Dashboard() {
                             <small>{hotspot.severity >= 4 ? 'Severe delay' : 'Moderate delay'}</small>
                           </div>
                           <div>
-                            <strong>{secToMin(hotspot.delaySeconds)}</strong>
+                            <strong>{secToMin(hotspot.delaySeconds)} min</strong>
                             <span>delay</span>
                           </div>
                         </div>
@@ -838,106 +842,122 @@ export default function Dashboard() {
 
 
         case 'public transport':
-          return (
-  <div className="topic-panel">
-    <div className="topic-section">
-      <h3>Public transport overview</h3>
+  return (
+    <div className="topic-panel">
+      <div className="topic-section">
+        <h3>Public transport overview</h3>
 
-      {transit.loading && (
-        <div className="skeleton">
-          Loading transit data…
-        </div>
-      )}
+        {(transit.loading || transitStats.loading) && (
+          <div className="skeleton">
+            Loading transit data…
+          </div>
+        )}
 
-      {transit.error && (
-        <div className="error">
-          ⚠ {transit.error}
-        </div>
-      )}
+        {(transit.error || transitStats.error) && (
+          <div className="error">
+            ⚠ {transit.error || transitStats.error}
+          </div>
+        )}
 
-      {transit.data && (
-        <div className="topic-card transit-card">
-          <div className="transit-overview-panel">
+        {transit.data && (
+          <div className="topic-card transit-card">
+            <div className="transit-overview-panel">
 
-            <div className="transit-top-row">
+              <div className="transit-top-row">
 
-              <div className="transit-score-card">
-                <span className="transit-label">
-                  Transit Network Status
-                </span>
+                <div className="transit-score-card">
+                  <span className="transit-label">
+                    Transit Network Status
+                  </span>
+                  <strong>
+                    {transitStats.data?.totalRoutes ?? '—'} Routes
+                  </strong>
+                  <p>
+                    Active public transport services currently operating in the city.
+                  </p>
+                </div>
 
-                <strong>
-                  {transitStats.data?.totalRoutes ?? '-'} Routes
-                </strong>
+                <div className="transit-top-detail">
+                  <div className="transit-quick-insights">
 
-                <p>
-                  Active public transport services currently operating in the city.
-                </p>
-              </div>
+                    <div className="transit-quick-card">
+                      <span>Nearby Stops</span>
+                      <strong>
+                        {userLocation
+                          ? <span className="nearme-badge">📍 Live</span>
+                          : transitStats.data?.totalStops ?? '—'
+                        }
+                      </strong>
+                      <p>
+                        {userLocation
+                          ? "Showing stops near your location."
+                          : "Public transport stops available nearby."
+                        }
+                      </p>
+                    </div>
 
-              <div className="transit-top-detail">
+                    <div className="transit-quick-card">
+                      <span>Average Delay</span>
+                      <strong>
+                        {typeof transitStats.data?.averageDelay === 'number'
+                          ? transitStats.data.averageDelay.toFixed(1)
+                          : '—'} min
+                      </strong>
+                      <p>
+                        Average delay across active routes.
+                      </p>
+                    </div>
 
-                <div className="transit-quick-insights">
+                    <div className="transit-quick-card">
+                      <span>Active Alerts</span>
+                      <strong>
+                        {transitStats.data?.activeAlerts ?? '—'}
+                      </strong>
+                      <p>
+                        Service disruptions and transit advisories.
+                      </p>
+                    </div>
 
-                  <div className="transit-quick-card">
-                    <span>Nearby Stops</span>
-                    <strong>
-                      {transitStats.data?.totalStops ?? '-'}
-                    </strong>
-                    <p>
-                      Public transport stops available nearby.
-                    </p>
                   </div>
-
-                  <div className="transit-quick-card">
-                    <span>Average Delay</span>
-                    <strong>
-                     {typeof transitStats.data?.averageDelay === 'number'
-                      ? transitStats.data.averageDelay.toFixed(1)
-                      : '—'} min
-                    </strong>
-                    <p>
-                      Average delay across active routes.
-                    </p>
-                  </div>
-
-                  <div className="transit-quick-card">
-                    <span>Active Alerts</span>
-                    <strong>
-                      {transitStats.data?.activeAlerts ?? '-'}
-                    </strong>
-                    <p>
-                      Service disruptions and transit advisories.
-                    </p>
-                  </div>
-
                 </div>
               </div>
+
+              <NearbyRoutesList
+                routes={transit?.data?.routes || []}
+                userLocation={userLocation}
+              />
+
+              {locationError && (
+                <div className="error">
+                  📍 {locationError}
+                </div>
+              )}
+              {locationLoading && (
+                <div className="loading-indicator">
+                  Getting your location…
+                </div>
+              )}
+              {/* Pass userLocation so NearbyStopsList can switch to live mode */}
+              <NearbyStopsList
+                stops={transit?.data?.nearbyStops || []}
+                userLocation={userLocation}
+              />
+
+              <TransitAlertsPanel
+                alerts={transit?.data?.alerts || []}
+              />
+
+              <CrowdingDistChart
+                routes={transit?.data?.routes || []}
+              />
+
             </div>
-
-            <TransitRoutesTable
-              routes={transit?.data?.routes || []}
-            />
-
-            <NearbyStopsList
-              stops={transit?.data?.nearbyStops || []}
-            />
-
-            <TransitAlertsPanel
-              alerts={transit?.data?.alerts || []}
-            />
-
-            <CrowdingDistChart 
-              routes={transit?.data?.routes || []}
-            />
-
           </div>
-        </div>
-      )}
+        )}
 
+      </div>
     </div>
-  </div>
-);
+  );
     }
   };
 
@@ -1367,6 +1387,20 @@ export default function Dashboard() {
                   {activeTopic === 'sentiment' && (
                     <button className="analyze-btn" disabled={!cityName} onClick={() => setShowSentimentTrendsModal(true)}>
                       Analyze latest trends
+                    </button>
+                  )}
+                  {activeTopic === 'public transport' && (
+                    <button
+                      className="analyze-btn"
+                      onClick={requestLocation}
+                      disabled={locationLoading || !!userLocation}
+                    >
+                      {locationLoading
+                        ? "Getting location…"
+                        : userLocation
+                        ? "📍 Location active"
+                        : "📍 Use my location"
+                      }
                     </button>
                   )}
                 </div>
