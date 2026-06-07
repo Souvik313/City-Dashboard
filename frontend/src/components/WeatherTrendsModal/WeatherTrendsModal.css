@@ -205,6 +205,18 @@
 .weather-trends-cards .trend-card.direction.cooling .value { color: var(--primary, #2563eb); }
 .weather-trends-cards .trend-card.direction.stable .value  { color: var(--muted, #6b7280); }
 
+.weather-trends-cards .trend-card.cloudDirection.increasing .sub{
+  color: var(--primary, #2563eb);
+}
+
+.weather-trends-cards .trend-card.cloudDirection.decreasing .sub{
+  color: var(--danger, #dc2626);
+}
+
+.weather-trends-cards .trend-card.cloudDirection.stable .sub{
+  color: var(--muted, #6b7280);
+}
+
 /* ── Chart section ── */
 .weather-trends-chart {
   background: var(--bg, #f8fafc);

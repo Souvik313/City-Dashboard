@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import useUserLocation from "../../hooks/useUserLocation.js";
 import EmergencyPlaceCard from "./EmergencyPlaceCard.jsx";
@@ -15,115 +15,177 @@ const SOS_NUMBERS = [
 ];
 
 const TYPE_MAP = {
-  all:       null,   // null means show everything
+  all:       null,
   hospitals: ["hospital", "clinic", "doctors"],
   police:    ["police"],
   fire:      ["fire_station"],
   pharmacy:  ["pharmacy"],
 };
 
-export default function EmergencyMode({ onExit }) {
+export default function EmergencyMode({ onExit, selectedCity }) {
   const [activeFilter, setActiveFilter] = useState("all");
-    const [allPlaces, setAllPlaces] = useState([]);  // all fetched once
-    const [loading, setLoading]     = useState(false);
-    const [error, setError]         = useState(null);
-    const [hasFetched, setHasFetched] = useState(false);
+  const [allPlaces, setAllPlaces]       = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState(null);
+  const [searchMode, setSearchMode]     = useState(null);
 
-  // ── useUserLocation hook ──────────────────────────────────────────────────
+  // track which coords we last fetched for
+  // prevents double-fetch when both useEffects fire
+  const lastFetchedCoordsRef = useRef(null);
+  const isFetchingRef        = useRef(false);
+
   const {
-    userLocation,           // { lat, lon, accuracy } — null until granted
+    userLocation: liveLocation,
     error: locationError,
     loading: locationLoading,
     requestLocation
   } = useUserLocation();
 
-  // ── auto-fetch places when location becomes available ────────────────────
-  useEffect(() => {
-    if (!userLocation || hasFetched) return;
-    fetchAllPlaces();
-  }, [userLocation]);
+  // ── resolve active coordinates from current mode ──────────────────────────
+  const getActiveCoords = useCallback(() => {
+    if (searchMode === "live" && liveLocation) {
+      return { lat: liveLocation.lat, lon: liveLocation.lon };
+    }
+    if (searchMode === "city" && selectedCity) {
+      return {
+        lat: selectedCity.latitude,
+        lon: selectedCity.longitude
+      };
+    }
+    return null;
+  }, [searchMode, liveLocation, selectedCity]);
 
-  useEffect(() => {
-  if (!userLocation || hasFetched) return;
+  // ── single fetch function — guards against duplicate calls ────────────────
+  const fetchAllPlaces = useCallback(async (coords) => {
+    if (!coords) return;
+    if (isFetchingRef.current) return; // already fetching
 
-  // wait 1.5s before firing — avoids collision with transit Overpass calls
-  const timer = setTimeout(fetchAllPlaces, 1500);
-  return () => clearTimeout(timer);
-}, [userLocation]);
+    // skip if we already fetched these exact coordinates
+    const coordKey = `${coords.lat},${coords.lon}`;
+    if (lastFetchedCoordsRef.current === coordKey) return;
 
-  // ── fetch places from backend ─────────────────────────────────────────────
-  const fetchAllPlaces = async () => {
-  setLoading(true);
-  setError(null);
+    isFetchingRef.current = true;
+    setLoading(true);
+    setError(null);
 
     try {
-    const res = await axios.get(`${API_URL}/api/v1/nearby/emergency`, {
-      params: {
-        lat: userLocation.lat,
-        lon: userLocation.lon,
-        type: "all"           // always fetch all — filter client-side
-      }
-    });
-    setAllPlaces(res.data?.data || []);
-    setHasFetched(true);
-  } catch (err) {
-    setError("Failed to fetch nearby emergency places. Please try again.");
-    console.error("Emergency places fetch error:", err.message);
-  } finally {
-    setLoading(false);
-  }
-  };
+      const res = await axios.get(`${API_URL}/api/v1/nearby/emergency`, {
+        params: { lat: coords.lat, lon: coords.lon, type: "all" }
+      });
 
-  // ── handle filter change ──────────────────────────────────────────────────
-   const handleFilterChange = (type) => {
-    setActiveFilter(type);
-    // no fetchPlaces call here — filtering is now client-side
-  };
+      setAllPlaces(res.data?.data || []);
+      lastFetchedCoordsRef.current = coordKey;
 
+    } catch (err) {
+      setError("Failed to fetch nearby emergency places. Please try again.");
+      console.error("Emergency fetch error:", err.message);
+    } finally {
+      setLoading(false);
+      isFetchingRef.current = false;
+    }
+  }, []);
+
+  // ── fetch when city mode is selected ─────────────────────────────────────
+  // only fires once when searchMode becomes "city"
+  useEffect(() => {
+    if (searchMode !== "city" || !selectedCity) return;
+
+    const coords = {
+      lat: selectedCity.latitude,
+      lon: selectedCity.longitude
+    };
+
+    const timer = setTimeout(() => fetchAllPlaces(coords), 500);
+    return () => clearTimeout(timer);
+  }, [searchMode, selectedCity]);
+
+  // ── fetch when live location becomes available ────────────────────────────
+  // only fires once when liveLocation is first set in live mode
+  useEffect(() => {
+    if (searchMode !== "live" || !liveLocation) return;
+
+    const coords = { lat: liveLocation.lat, lon: liveLocation.lon };
+    fetchAllPlaces(coords);
+  }, [searchMode, liveLocation]);
+
+  // ── client-side filtering — no API calls ─────────────────────────────────
   const places = activeFilter === "all"
-  ? allPlaces
-  : allPlaces.filter((p) =>
-      TYPE_MAP[activeFilter]?.includes(p.type)
-    );
+    ? allPlaces
+    : allPlaces.filter((p) => TYPE_MAP[activeFilter]?.includes(p.type));
 
-  // ── build counts for filter bar badges ───────────────────────────────────
   const counts = {
     all:       allPlaces.length,
     hospitals: allPlaces.filter(p =>
-        ["hospital", "clinic", "doctors"].includes(p.type)).length,
+      ["hospital", "clinic", "doctors"].includes(p.type)).length,
     police:    allPlaces.filter(p => p.type === "police").length,
     fire:      allPlaces.filter(p => p.type === "fire_station").length,
     pharmacy:  allPlaces.filter(p => p.type === "pharmacy").length,
-};
+  };
 
-  // ── skeleton cards ────────────────────────────────────────────────────────
+  // ── mode handlers ─────────────────────────────────────────────────────────
+  const handleUseLiveLocation = () => {
+    if (searchMode === "live") return; // already in live mode
+    lastFetchedCoordsRef.current = null; // allow fresh fetch for new coords
+    setAllPlaces([]);
+    setError(null);
+    setActiveFilter("all");
+    setSearchMode("live");
+    if (!liveLocation) requestLocation();
+  };
+
+  const handleUseCityLocation = () => {
+    if (searchMode === "city") return; // already in city mode
+    lastFetchedCoordsRef.current = null; // allow fresh fetch for new coords
+    setAllPlaces([]);
+    setError(null);
+    setActiveFilter("all");
+    setSearchMode("city");
+  };
+
+  const handleFilterChange = (type) => {
+    setActiveFilter(type); // client-side only — no fetch
+  };
+
+  const handleRetry = () => {
+    lastFetchedCoordsRef.current = null; // reset so fetch runs again
+    isFetchingRef.current = false;
+    const coords = getActiveCoords();
+    if (coords) fetchAllPlaces(coords);
+  };
+
+  // ── skeleton ──────────────────────────────────────────────────────────────
   const renderSkeleton = () => (
     <div className="emergency-grid">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="emergency-place-card emergency-card-skeleton">
           <div className="emergency-place-header">
-            <div className="skeleton" style={{width:'44px', height:'44px', borderRadius:'12px'}}/>
-            <div style={{flex:1, display:'flex', flexDirection:'column', gap:'6px'}}>
+            <div className="skeleton"
+              style={{width:'44px', height:'44px', borderRadius:'12px'}}/>
+            <div style={{flex:1, display:'flex',
+                         flexDirection:'column', gap:'6px'}}>
               <div className="skeleton" style={{width:'70%', height:'14px'}}/>
               <div className="skeleton" style={{width:'40%', height:'12px'}}/>
             </div>
-            <div style={{display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-end'}}>
+            <div style={{display:'flex', flexDirection:'column',
+                         gap:'4px', alignItems:'flex-end'}}>
               <div className="skeleton" style={{width:'36px', height:'16px'}}/>
               <div className="skeleton" style={{width:'24px', height:'12px'}}/>
             </div>
           </div>
           <div className="skeleton" style={{width:'80%', height:'12px'}}/>
           <div style={{display:'flex', gap:'8px', marginTop:'4px'}}>
-            <div className="skeleton" style={{flex:1, height:'36px', borderRadius:'8px'}}/>
-            <div className="skeleton" style={{flex:1, height:'36px', borderRadius:'8px'}}/>
+            <div className="skeleton"
+              style={{flex:1, height:'36px', borderRadius:'8px'}}/>
+            <div className="skeleton"
+              style={{flex:1, height:'36px', borderRadius:'8px'}}/>
           </div>
         </div>
       ))}
     </div>
   );
 
-  // ── PHASE 1: location not yet granted ─────────────────────────────────────
-  if (!userLocation && !locationLoading) {
+  // ── PHASE 0: mode not selected yet ───────────────────────────────────────
+  if (!searchMode) {
     return (
       <div className="emergency-mode">
         <div className="emergency-header">
@@ -136,14 +198,9 @@ export default function EmergencyMode({ onExit }) {
           </button>
         </div>
 
-        {/* SOS numbers always visible — no location needed */}
         <div className="sos-grid">
           {SOS_NUMBERS.map((s) => (
-            <a
-              key={s.label}
-              href={`tel:${s.number}`}
-              className="sos-card"
-            >
+            <a key={s.label} href={`tel:${s.number}`} className="sos-card">
               <span className="sos-icon">{s.icon}</span>
               <strong>{s.number}</strong>
               <span>{s.label}</span>
@@ -151,19 +208,53 @@ export default function EmergencyMode({ onExit }) {
           ))}
         </div>
 
-        <div className="emergency-location-prompt">
-          <div className="emergency-location-icon">📍</div>
-          <h3>Enable location to find nearby help</h3>
+        <div className="emergency-mode-select">
+          <h3>How would you like to search?</h3>
           <p>
-            CityPulse needs your location to show the nearest
-            hospitals, police stations, fire stations and pharmacies.
+            Find nearby emergency services using your live location
+            or browse services in the currently loaded city.
           </p>
-          <button
-            className="emergency-location-btn"
-            onClick={requestLocation}
-          >
-            Share my location
-          </button>
+
+          <div className="emergency-mode-options">
+            <button
+              className="emergency-mode-option"
+              onClick={handleUseLiveLocation}
+              disabled={locationLoading}
+            >
+              <span className="emergency-mode-option-icon">📍</span>
+              <div className="emergency-mode-option-text">
+                <strong>Use my location</strong>
+                <span>
+                  Find emergency services near where you are right now
+                </span>
+              </div>
+              {locationLoading && <div className="emergency-pulse-dot"/>}
+            </button>
+
+            <button
+              className="emergency-mode-option"
+              onClick={handleUseCityLocation}
+              disabled={!selectedCity}
+            >
+              <span className="emergency-mode-option-icon">🏙️</span>
+              <div className="emergency-mode-option-text">
+                <strong>
+                  Search in {selectedCity?.name || "current city"}
+                </strong>
+                <span>
+                  Browse emergency services in the loaded city
+                  without sharing your location
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {!selectedCity && (
+            <p className="emergency-no-city-note">
+              Load a city from the dashboard to use city-based search.
+            </p>
+          )}
+
           {locationError && (
             <div className="emergency-location-error">
               {locationError}
@@ -174,8 +265,8 @@ export default function EmergencyMode({ onExit }) {
     );
   }
 
-  // ── PHASE 2: location loading ─────────────────────────────────────────────
-  if (locationLoading) {
+  // ── PHASE 1: live mode — waiting for location ────────────────────────────
+  if (searchMode === "live" && locationLoading) {
     return (
       <div className="emergency-mode">
         <div className="emergency-header">
@@ -204,25 +295,74 @@ export default function EmergencyMode({ onExit }) {
     );
   }
 
-  // ── PHASE 3: location available — main emergency UI ───────────────────────
+  // ── PHASE 2: live mode — location denied ─────────────────────────────────
+  if (searchMode === "live" && !liveLocation && !locationLoading) {
+    return (
+      <div className="emergency-mode">
+        <div className="emergency-header">
+          <div className="emergency-title-row">
+            <span className="emergency-badge-icon">🚨</span>
+            <h2>Emergency Mode</h2>
+          </div>
+          <button className="emergency-exit-btn" onClick={onExit}>
+            ✕ Exit Emergency
+          </button>
+        </div>
+        <div className="sos-grid">
+          {SOS_NUMBERS.map((s) => (
+            <a key={s.label} href={`tel:${s.number}`} className="sos-card">
+              <span className="sos-icon">{s.icon}</span>
+              <strong>{s.number}</strong>
+              <span>{s.label}</span>
+            </a>
+          ))}
+        </div>
+        <div className="emergency-location-prompt">
+          <div className="emergency-location-icon">📍</div>
+          <h3>Location access needed</h3>
+          <p>
+            {locationError ||
+              "Please allow location access to find emergency services near you."}
+          </p>
+          <div className="emergency-prompt-actions">
+            <button
+              className="emergency-location-btn"
+              onClick={requestLocation}
+            >
+              Try again
+            </button>
+            <button
+              className="emergency-switch-btn"
+              onClick={handleUseCityLocation}
+              disabled={!selectedCity}
+            >
+              🏙️ Search in {selectedCity?.name || "city"} instead
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE 3: main emergency UI ────────────────────────────────────────────
+  const coordLabel = searchMode === "live" && liveLocation
+    ? `📍 ${liveLocation.lat.toFixed(4)}, ${liveLocation.lon.toFixed(4)}`
+    : `🏙️ ${selectedCity?.name || "City"}`;
+
   return (
     <div className="emergency-mode">
 
-      {/* ── header ── */}
       <div className="emergency-header">
         <div className="emergency-title-row">
           <span className="emergency-badge-icon">🚨</span>
           <h2>Emergency Mode</h2>
-          <span className="emergency-location-tag">
-            📍 {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
-          </span>
+          <span className="emergency-location-tag">{coordLabel}</span>
         </div>
         <button className="emergency-exit-btn" onClick={onExit}>
           ✕ Exit Emergency
         </button>
       </div>
 
-      {/* ── SOS numbers ── */}
       <div className="sos-grid">
         {SOS_NUMBERS.map((s) => (
           <a key={s.label} href={`tel:${s.number}`} className="sos-card">
@@ -233,45 +373,61 @@ export default function EmergencyMode({ onExit }) {
         ))}
       </div>
 
-      {/* ── filter bar ── */}
+      <div className="emergency-mode-switcher">
+        <button
+          className={`emergency-mode-switch-btn
+            ${searchMode === "live" ? "active" : ""}`}
+          onClick={handleUseLiveLocation}
+          disabled={locationLoading}
+        >
+          📍 My location
+        </button>
+        <button
+          className={`emergency-mode-switch-btn
+            ${searchMode === "city" ? "active" : ""}`}
+          onClick={handleUseCityLocation}
+          disabled={!selectedCity}
+        >
+          🏙️ {selectedCity?.name || "City"}
+        </button>
+      </div>
+
       <EmergencyFilterBar
         activeFilter={activeFilter}
         onFilterChange={handleFilterChange}
         counts={counts}
       />
 
-      {/* ── error ── */}
       {error && !loading && (
         <div className="emergency-error">
           <span>{error}</span>
-          <button
-            className="emergency-retry-btn"
-            onClick={() => fetchAllPlaces()}
-          >
+          <button className="emergency-retry-btn" onClick={handleRetry}>
             ↺ Retry
           </button>
         </div>
       )}
 
-      {/* ── loading skeleton ── */}
       {loading && renderSkeleton()}
 
-      {/* ── empty state ── */}
-      {!loading && !error && hasFetched && places.length === 0 && (
+      {!loading && !error && allPlaces.length === 0 &&
+       lastFetchedCoordsRef.current && (
         <div className="emergency-empty">
           <span>😔</span>
-          <p>No {activeFilter === "all" ? "emergency places" : activeFilter} found within 3km of your location.</p>
+          <p>
+            No {activeFilter === "all"
+              ? "emergency places"
+              : activeFilter} found within 3km of{" "}
+            {searchMode === "live"
+              ? "your location"
+              : selectedCity?.name}.
+          </p>
         </div>
       )}
 
-      {/* ── places grid ── */}
       {!loading && places.length > 0 && (
         <div className="emergency-grid">
           {places.map((place) => (
-            <EmergencyPlaceCard
-              key={place.id}
-              place={place}
-            />
+            <EmergencyPlaceCard key={place.id} place={place} />
           ))}
         </div>
       )}

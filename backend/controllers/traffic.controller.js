@@ -165,7 +165,7 @@ export const getLatestTrafficByCity = catchAsync(async (req, res, next) => {
 });
 
 export const getTrafficHistory = catchAsync(async (req, res, next) => {
-  const { city, limit = 200 } = req.query;
+  const { city, limit = 500 } = req.query;
 
   if (!city) {
     return next(

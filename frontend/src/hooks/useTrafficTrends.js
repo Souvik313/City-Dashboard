@@ -31,7 +31,7 @@ export default function useTrafficTrends(cityNameOrId, options = {}) {
         const historyRes = await axios.get(`${API_URL}/api/v1/traffic/history`, {
             params: {
                 city: cityNameOrId,
-                limit: period === "7d" ? 168 : 48
+                limit: period === "7d" ? 200 : 100
             }
         });
 

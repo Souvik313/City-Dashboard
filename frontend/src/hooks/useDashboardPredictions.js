@@ -29,6 +29,43 @@ function estimateWeatherNextHour(trends) {
   };
 }
 
+function estimateWeatherNextDay(trends) {
+  if (!trends?.current) return null;
+
+  const change = trends.trend?.changeFromAverage ?? 0;
+
+  let predictedTemp =
+    trends.current.temperature + (change * 0.5);
+
+  predictedTemp = Math.max(
+    trends.minTemp,
+    Math.min(predictedTemp, trends.maxTemp + 2)
+  );
+
+  let condition =
+    trends.mostCommonCondition ||
+    trends.current.condition;
+
+  if (
+    trends.averageHumidity > 80 &&
+    predictedTemp < trends.current.temperature
+  ) {
+    condition = "Rain likely";
+  }
+
+  return {
+    temperature: Math.round(predictedTemp * 10) / 10,
+    condition,
+    humidity: trends.averageHumidity,
+    direction: trends.direction,
+    timestamp: new Date(
+      Date.now() + 24 * 60 * 60 * 1000
+    ).toISOString(),
+    fallback: true,
+    source: "trend",
+  };
+}
+
 function estimateTrafficNextHour(records) {
   if (!records?.length) return null;
 
@@ -78,9 +115,10 @@ export default function useDashboardPredictions(city, { enabled = true } = {}) {
     setWeather((prev) => ({ ...prev, loading: true, error: null }));
     setTraffic((prev) => ({ ...prev, loading: true, error: null }));
 
-    const [aqiResult, weatherResult, trafficResult] = await Promise.allSettled([
+    const [aqiResult, weather24hResult, weather7dResult, trafficResult] = await Promise.allSettled([
       axios.get(`${API_URL}/api/v1/aqi/predict`, { params: { city } }),
       axios.get(`${API_URL}/api/v1/weather/trends`, { params: { city, period: "24h" } }),
+      axios.get(`${API_URL}/api/v1/weather/trends`, { params: { city, period: "7d" } }),
       axios.get(`${API_URL}/api/v1/traffic/history`, { params: { city, limit: 24 } }),
     ]);
 
@@ -98,19 +136,38 @@ export default function useDashboardPredictions(city, { enabled = true } = {}) {
       setAqi({ loading: false, data: null, error: err });
     }
 
-    if (weatherResult.status === "fulfilled" && weatherResult.value.data?.status === "success") {
-      const estimate = estimateWeatherNextHour(weatherResult.value.data.data);
+    if (
+      weather24hResult.status === "fulfilled" &&
+      weather7dResult.status === "fulfilled" &&
+      weather24hResult.value.data?.status === "success" &&
+      weather7dResult.value.data?.status === "success"
+    ) {
+      const trends24h = weather24hResult.value.data.data;
+      const trends7d = weather7dResult.value.data.data;
+
       setWeather({
         loading: false,
-        data: estimate,
-        error: estimate ? null : "Not enough weather history for a forecast",
+        data: {
+          nextHour: estimateWeatherNextHour(trends24h),
+          nextDay: estimateWeatherNextDay(trends7d)
+        },
+        error: null,
       });
     } else {
       const err =
-        weatherResult.status === "rejected"
-          ? weatherResult.reason?.response?.data?.message || weatherResult.reason?.message
-          : "Unable to load weather forecast";
-      setWeather({ loading: false, data: null, error: err });
+  weather24hResult.status === "rejected"
+    ? weather24hResult.reason?.response?.data?.message ||
+      weather24hResult.reason?.message
+    : weather7dResult.status === "rejected"
+    ? weather7dResult.reason?.response?.data?.message ||
+      weather7dResult.reason?.message
+    : "Unable to load weather forecast";
+
+setWeather({
+  loading: false,
+  data: null,
+  error: err
+});
     }
 
     if (trafficResult.status === "fulfilled" && trafficResult.value.data?.data?.length) {

@@ -40,12 +40,16 @@ export async function getWeatherTrends(cityId, options = {}) {
 
   const temps = records.map((r) => r.temperature).filter((v) => v != null);
   const humidities = records.map((r) => r.humidity).filter((v) => v != null);
+  const cloudCovers = records
+  .map((r) => r.cloudCover)
+  .filter((v) => v != null);
   const latest = records[records.length - 1];
   const current = {
     temperature: latest.temperature,
     feelsLike: latest.feelsLiks,
     condition: latest.condition?.description || latest.condition?.main || "—",
     humidity: latest.humidity,
+    cloudCover: latest.cloudCover,
     windSpeed: latest.wind?.speed,
     recordedAt: latest.recordedAt,
   };
@@ -55,11 +59,26 @@ export async function getWeatherTrends(cityId, options = {}) {
   const maxTemp = temps.length ? Math.max(...temps) : null;
   const avgHumidity =
     humidities.length ? humidities.reduce((s, v) => s + v, 0) / humidities.length : null;
+  const avgCloudCover =
+  cloudCovers.length
+    ? cloudCovers.reduce((s, v) => s + v, 0) / cloudCovers.length
+    : null;
 
   const diffTemp = current.temperature != null && avgTemp != null ? current.temperature - avgTemp : 0;
   let direction = "stable";
   if (diffTemp <= -1) direction = "cooling";
   else if (diffTemp >= 1) direction = "warming";
+
+  const cloudDiff =
+  current.cloudCover != null &&
+  avgCloudCover != null
+    ? current.cloudCover - avgCloudCover
+    : 0;
+
+  let cloudTrend = "stable";
+
+  if (cloudDiff >= 10) cloudTrend = "increasing";
+  else if (cloudDiff <= -10) cloudTrend = "decreasing";
 
   const conditionCounts = {};
   records.forEach((r) => {
@@ -115,6 +134,17 @@ export async function getWeatherTrends(cityId, options = {}) {
     minTemp,
     maxTemp,
     averageHumidity: avgHumidity != null ? Math.round(avgHumidity * 10) / 10 : null,
+    averageCloudCover:
+    avgCloudCover != null
+      ? Math.round(avgCloudCover * 10) / 10
+      : null,
+    cloudTrend: {
+    direction: cloudTrend,
+    changeFromAverage:
+      avgCloudCover != null
+        ? Math.round(cloudDiff * 10) / 10
+        : null,
+    },
     direction,
     mostCommonCondition,
     peakHour:

@@ -511,30 +511,64 @@ export default function Dashboard() {
                 title="Next-hour weather forecast"
                 loading={weatherPrediction.loading}
                 error={weatherPrediction.error}
-                fallback={weatherPrediction.data?.fallback}
-                timestamp={weatherPrediction.data?.timestamp}
+                fallback={weatherPrediction.data.nextHour?.fallback}
+                timestamp={weatherPrediction.data.nextHour?.timestamp}
               >
                 
-                {weatherPrediction.data && (
+                {weatherPrediction.data.nextHour && (
                   <div className="prediction-metrics">
                     <div className="prediction-metric">
-                      <strong>{weatherPrediction.data.temperature ?? "—"}°C</strong>
+                      <strong>{weatherPrediction.data.nextHour.temperature ?? "—"}°C</strong>
                       <span>Temperature</span>
-                      {weather.data?.temperature != null && weatherPrediction.data.temperature != null && (
+                      {weather.data?.temperature != null && weatherPrediction.data.nextHour.temperature != null && (
                         <PredictionDelta
                           delta={formatDelta(
-                            weatherPrediction.data.temperature - weather.data.temperature,
+                            weatherPrediction.data.nextHour.temperature - weather.data.temperature,
                             "°C"
                           )}
                         />
                       )}
                     </div>
                     <div className="prediction-metric">
-                      <strong>{weatherPrediction.data.condition || "—"}</strong>
+                      <strong>{weatherPrediction.data.nextHour.condition || "—"}</strong>
                       <span>Condition</span>
                     </div>
                     <div className="prediction-metric">
-                      <strong>{weatherPrediction.data.humidity ?? "—"}%</strong>
+                      <strong>{weatherPrediction.data.nextHour.humidity ?? "—"}%</strong>
+                      <span>Humidity</span>
+                    </div>
+                  </div>
+                )}
+              </PredictionInsight>
+
+              <PredictionInsight
+                title="Next-day weather forecast"
+                loading={weatherPrediction.loading}
+                error={weatherPrediction.error}
+                fallback={weatherPrediction.data.nextDay?.fallback}
+                timestamp={weatherPrediction.data.nextDay?.timestamp}
+              >
+                
+                {weatherPrediction.data.nextDay && (
+                  <div className="prediction-metrics">
+                    <div className="prediction-metric">
+                      <strong>{weatherPrediction.data.nextDay.temperature ?? "—"}°C</strong>
+                      <span>Temperature</span>
+                      {weather.data?.temperature != null && weatherPrediction.data.nextDay.temperature != null && (
+                        <PredictionDelta
+                          delta={formatDelta(
+                            weatherPrediction.data.nextDay.temperature - weather.data.temperature,
+                            "°C"
+                          )}
+                        />
+                      )}
+                    </div>
+                    <div className="prediction-metric">
+                      <strong>{weatherPrediction.data.nextDay.condition || "—"}</strong>
+                      <span>Condition</span>
+                    </div>
+                    <div className="prediction-metric">
+                      <strong>{weatherPrediction.data.nextDay.humidity ?? "—"}%</strong>
                       <span>Humidity</span>
                     </div>
                   </div>
@@ -1074,12 +1108,12 @@ export default function Dashboard() {
           ) : weatherPrediction.data ? (
             <>
               <div className="overview-value">
-                {weatherPrediction.data.temperature != null
-                  ? `${weatherPrediction.data.temperature}°C`
+                {weatherPrediction.data.nextHour.temperature != null
+                  ? `${weatherPrediction.data.nextHour.temperature}°C`
                   : "—"}
               </div>
               <div className="overview-meta">
-                {weatherPrediction.data.condition || "Condition pending"}
+                {weatherPrediction.data.nextHour.condition || "Condition pending"}
               </div>
             </>
           ) : (
@@ -1499,10 +1533,10 @@ export default function Dashboard() {
           />
         )}
         {emergencyMode && (
-  <div className="emergency-overlay">
-    <EmergencyMode onExit={() => setEmergencyMode(false)} />
-  </div>
-)}
+          <div className="emergency-overlay">
+            <EmergencyMode onExit={() => setEmergencyMode(false)} selectedCity={selectedCity} />
+          </div>
+        )}
       </div>
     </>
   );

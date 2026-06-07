@@ -26,7 +26,7 @@ export default function useWeatherTrends(cityNameOrId, options = {}) {
         }),
         withHistory
           ? axios.get(`${API_URL}/api/v1/weather/history`, {
-              params: { city: cityNameOrId, limit: period === "7d" ? 168 : 48 },
+              params: { city: cityNameOrId, limit: period === "7d" ? 200 : 100 },
             })
           : Promise.resolve({ data: {} }),
       ]);

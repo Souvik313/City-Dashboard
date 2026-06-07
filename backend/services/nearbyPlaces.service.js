@@ -106,19 +106,19 @@ const generateVehicleCount = (routeType) => {
 const EMERGENCY_QUERIES = {
   hospitals: `node["amenity"="hospital"](around:3000,LAT,LON);
               node["amenity"="clinic"](around:3000,LAT,LON);
-              node["amenity"="doctors"](around:2000,LAT,LON);`,
+              node["amenity"="doctors"](around:3000,LAT,LON);`,
 
   police:    `node["amenity"="police"](around:3000,LAT,LON);`,
 
   fire:      `node["amenity"="fire_station"](around:3000,LAT,LON);`,
 
-  pharmacy:  `node["amenity"="pharmacy"](around:2000,LAT,LON);`,
+  pharmacy:  `node["amenity"="pharmacy"](around:3000,LAT,LON);`,
 
   all:       `node["amenity"="hospital"](around:3000,LAT,LON);
               node["amenity"="clinic"](around:3000,LAT,LON);
               node["amenity"="police"](around:3000,LAT,LON);
               node["amenity"="fire_station"](around:3000,LAT,LON);
-              node["amenity"="pharmacy"](around:2000,LAT,LON);`
+              node["amenity"="pharmacy"](around:3000,LAT,LON);`
 };
 
 const getDistanceKm = (lat1, lon1, lat2, lon2) => {
@@ -133,12 +133,24 @@ const getDistanceKm = (lat1, lon1, lat2, lon2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+const formatAmenityName = (amenity) => {
+  if (!amenity) return null;
+  const nameMap = {
+    hospital:      "Hospital",
+    clinic:        "Clinic",
+    doctors:       "Medical Clinic",
+    police:        "Police Station",
+    fire_station:  "Fire Station",
+    pharmacy:      "Pharmacy",
+  };
+  return nameMap[amenity] || null;
+};
+
 export const fetchNearbyEmergencyPlaces = async (lat, lon, type = "all") => {
 
   const OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
   ];
 
   const queryBody = EMERGENCY_QUERIES[type] || EMERGENCY_QUERIES.all;
@@ -161,7 +173,7 @@ export const fetchNearbyEmergencyPlaces = async (lat, lon, type = "all") => {
             "Content-Type": "application/x-www-form-urlencoded",
             "User-Agent": "CityPulse/1.0"
           },
-          timeout: 20000
+          timeout: 50000,
         }
       );
 
@@ -169,27 +181,39 @@ export const fetchNearbyEmergencyPlaces = async (lat, lon, type = "all") => {
       console.log(`✅ Emergency places (${endpoint}): ${elements.length}`);
 
       return elements
-        .filter((el) => el.tags?.name)
-        .map((el) => ({
-          id:       `osm_${el.id}`,
-          name:     el.tags.name,
-          type:     el.tags.amenity,
-          lat:      el.lat,
-          lon:      el.lon,
-          distance: parseFloat(
-            getDistanceKm(lat, lon, el.lat, el.lon).toFixed(2)
-          ),
-          phone:    el.tags?.phone ||
-                    el.tags?.["contact:phone"] || null,
-          address:  [
-            el.tags?.["addr:housenumber"],
-            el.tags?.["addr:street"],
-            el.tags?.["addr:suburb"]
-          ].filter(Boolean).join(", ") || null,
-          openingHours: el.tags?.opening_hours || null,
-        }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 10);
+  .filter((el) => {
+    // keep named places AND unnamed ones that have a clear amenity type
+    // only skip if we have absolutely no identifying information
+    return el.tags?.name ||
+           el.tags?.amenity ||
+           el.tags?.["name:en"];
+  })
+  .map((el) => ({
+    id:       `osm_${el.id}`,
+    name:     el.tags?.name ||
+              el.tags?.["name:en"] ||
+              el.tags?.["name:hi"] ||     // Hindi name
+              formatAmenityName(el.tags?.amenity) ||
+              "Unnamed facility",
+    type:     el.tags.amenity,
+    lat:      el.lat,
+    lon:      el.lon,
+    distance: parseFloat(
+      getDistanceKm(lat, lon, el.lat, el.lon).toFixed(2)
+    ),
+    phone:    el.tags?.phone ||
+              el.tags?.["contact:phone"] ||
+              el.tags?.["contact:mobile"] || null,
+    address:  [
+      el.tags?.["addr:housenumber"],
+      el.tags?.["addr:street"],
+      el.tags?.["addr:suburb"],
+      el.tags?.["addr:city"]
+    ].filter(Boolean).join(", ") || null,
+    openingHours: el.tags?.opening_hours || null,
+  }))
+  .sort((a, b) => a.distance - b.distance)
+  .slice(0, 25);
 
     } catch (err) {
       console.warn(`Emergency Overpass failed (${endpoint}): ${err.message}`);

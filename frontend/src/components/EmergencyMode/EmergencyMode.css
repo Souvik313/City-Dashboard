@@ -489,3 +489,174 @@
   .emergency-filter-btn { padding: 8px 12px; font-size: 0.78rem; }
   .emergency-title-row h2 { font-size: 1.2rem; }
 }
+
+/* =========================
+   Emergency — Mode selection screen
+========================= */
+.emergency-mode-select {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.emergency-mode-select h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.emergency-mode-select > p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.emergency-mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .emergency-mode-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.emergency-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease,
+              transform 0.15s ease, background 0.18s ease;
+}
+
+.emergency-mode-option:hover:not(:disabled) {
+  border-color: var(--danger);
+  box-shadow: 0 4px 16px rgba(224, 49, 49, 0.12);
+  transform: translateY(-2px);
+}
+
+.emergency-mode-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.emergency-mode-option-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.emergency-mode-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.emergency-mode-option-text strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.emergency-mode-option-text span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.emergency-no-city-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+  font-style: italic;
+}
+
+/* =========================
+   Emergency — Mode switcher (after selection)
+========================= */
+.emergency-mode-switcher {
+  display: flex;
+  gap: 8px;
+}
+
+.emergency-mode-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease;
+}
+
+.emergency-mode-switch-btn:hover:not(:disabled) {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.emergency-mode-switch-btn.active {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.emergency-mode-switch-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Emergency — Location denied prompt actions
+========================= */
+.emergency-prompt-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.emergency-switch-btn {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.emergency-switch-btn:hover:not(:disabled) {
+  background: var(--card-bg);
+  border-color: var(--border-strong);
+}
+
+.emergency-switch-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

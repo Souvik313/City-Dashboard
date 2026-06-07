@@ -100,6 +100,15 @@ export default function WeatherTrendsModal({ cityName, onClose }) {
                   <span className="label">Avg humidity</span>
                   <span className="value">{trends.averageHumidity ?? "—"}%</span>
                 </div>
+                <div className={`trend-card cloudDirection ${trends.cloudTrend?.direction}`}>
+                  <span className="label">Avg cloud cover</span>
+                  <span className="value">{trends.averageCloudCover ?? "—"}%</span>
+                  <span className="sub">
+                    {trends.cloudTrend?.direction === "increasing" && "Cloudiness increasing"}
+                    {trends.cloudTrend?.direction === "decreasing" && "Skies clearing"}
+                    {trends.cloudTrend?.direction === "stable" && "Little change expected"}
+                  </span>
+                </div>
                 <div className="trend-card">
                   <span className="label">Most common condition</span>
                   <span className="value">{trends.mostCommonCondition ?? "—"}</span>
