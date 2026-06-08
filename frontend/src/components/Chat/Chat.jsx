@@ -18,7 +18,7 @@ export default function Chat({ cityId }) {
 
   const initSocket = (resolvedSessionId) => {
     try {
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const backendUrl = import.meta.env.VITE_APP_API_URL || 'http://localhost:5000';
       if (!socketRef.current) {
         socketRef.current = createSocket(backendUrl);
         socketRef.current.on('connect', () => {

@@ -4,7 +4,7 @@ import { useFetchUser } from "../../hooks/useFetchUser.js";
 import axios from "axios";
 import './UpdateProfile.css';
 import Header from "../../components/Header/Header.jsx";
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
 const UpdateProfile = () => {
     const navigate = useNavigate();

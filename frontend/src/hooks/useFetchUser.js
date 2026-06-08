@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useState , useEffect } from 'react';
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 export const useFetchUser = () => {
     const [user , setUser] = useState(null);
     const [loading , setLoading] = useState(true);

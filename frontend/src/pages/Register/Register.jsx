@@ -4,7 +4,7 @@ import Header from "../../components/Header/Header.jsx";
 import Footer from '../../components/Footer/Footer.jsx';
 import './Register.css';
 import axios from 'axios';
-const API_URL = 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:5000';
 
 const Register = () => {
     const [formData, setFormData] = useState({

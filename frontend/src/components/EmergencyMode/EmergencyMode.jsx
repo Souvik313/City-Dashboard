@@ -5,7 +5,7 @@ import EmergencyPlaceCard from "./EmergencyPlaceCard.jsx";
 import EmergencyFilterBar from "./EmergencyFilterBar.jsx";
 import "./EmergencyMode.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
 const SOS_NUMBERS = [
   { label: "Police",    number: "100", icon: "🚔" },

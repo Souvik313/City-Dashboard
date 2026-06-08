@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import Header from '../../components/Header/Header.jsx';
 import './Login.css';
 import axios from 'axios';
-const API_URL = 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:5000';
 
 const Login = () => {
     const [formData, setFormData] = useState({

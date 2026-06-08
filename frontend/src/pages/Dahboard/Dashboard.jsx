@@ -47,7 +47,7 @@ import EmergencyMode from "../../components/EmergencyMode/EmergencyMode.jsx";
 import HealthSearch from "../../components/HealthSearch/HealthSearch.jsx";
 import TravelSearch from "../../components/TravelSearch/TravelSearch.jsx";
 import Groq from "groq-sdk";
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
 
 const groq = new Groq({

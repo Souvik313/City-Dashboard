@@ -3,7 +3,7 @@ import axios from "axios";
 import TravelPlaceCard from "./TravelPlaceCard.jsx";
 import "./TravelSearch.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
 const CATEGORIES = [
   { key: "all",         label: "All",          icon: "✨" },
