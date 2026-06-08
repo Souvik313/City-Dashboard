@@ -52,7 +52,7 @@ const inferTypeFromName = (routeName, operator) => {
   if (name.includes("EXPRESS") || name.includes("VOLVO"))
     return { type: "bus", label: "Express Bus" };
 
-  return null; // no inference possible — fall back to GTFS code
+  return null;
 };
 
 const resolveRouteType = (routeTypeCode, routeName, operator) => {
@@ -217,7 +217,6 @@ export const fetchNearbyEmergencyPlaces = async (lat, lon, type = "all") => {
 
     } catch (err) {
       console.warn(`Emergency Overpass failed (${endpoint}): ${err.message}`);
-      // try next endpoint
     }
   }
 

@@ -26,6 +26,8 @@ import weatherHazeIcon from '../../assets/weather-haze.svg';
 import weatherWindIcon from '../../assets/weather-wind.svg';
 import weatherUnknownIcon from '../../assets/weather-unknown.svg';
 import transportIcon from '../../assets/transportIcon.png';
+import healthIcon from "../../assets/healthIcon.png";
+import travelIcon from "../../assets/travelIcon.png";
 import NearbyStopsList from "../../components/NearbyStopList/NearbyStopList.jsx";
 import NearbyRoutesList from "../../components/NearbyRoutesList/NearbyRoutesList.jsx";
 import TransitAlertsPanel from "../../components/TransitAlertsPanel/TransitAlertsPanel.jsx";
@@ -42,6 +44,8 @@ import OutdoorActivities from "../../components/OutdoorActivities/OutdoorActivit
 import PollutantBars from "../../components/PollutantBars/PollutantBars.jsx";
 import useUserLocation from "../../hooks/useUserLocation.js";
 import EmergencyMode from "../../components/EmergencyMode/EmergencyMode.jsx";
+import HealthSearch from "../../components/HealthSearch/HealthSearch.jsx";
+import TravelSearch from "../../components/TravelSearch/TravelSearch.jsx";
 import Groq from "groq-sdk";
 const API_URL = "http://localhost:5000";
 
@@ -392,6 +396,8 @@ export default function Dashboard() {
     { id: 'incidents', icon: incidentIcon, label: 'Incident Reports', description: 'Submit issues, view analytics, and track recent local reports.' },
     { id: 'heatmap', icon: heatmapIcon, label: 'Heatmap', description: 'Interactive city map with AQI, weather, traffic hotspots, and incident layers.' },
     { id: 'public transport', icon: transportIcon, label: "Public Transport" , description: "Real-time transit status, routes, delays, crowding information and alerts."},
+    { id: "health" , icon: healthIcon , label: "Health Sevices" , description: "Find hospitals and specialists for your health condition in this city."},
+    { id: "travel" , icon: travelIcon , label: "Travel & Stay" , description: "Find hotels, restaurants and attractions for your visit to this city."},
   ];
 
   const activeTopicMeta = topics.find((topic) => topic.id === activeTopic);
@@ -991,6 +997,38 @@ export default function Dashboard() {
           </div>
         )}
 
+      </div>
+    </div>
+  );
+
+  case 'health':
+  return (
+    <div className="topic-panel">
+      <div className="topic-section">
+        <h3>Find Medical Specialists</h3>
+        {!selectedCity ? (
+          <div className="dashboard-empty-state">
+            <h3>Select a city to search for specialists.</h3>
+          </div>
+        ) : (
+          <HealthSearch cityName={cityName} />
+        )}
+      </div>
+    </div>
+  );
+
+  case 'travel':
+  return (
+    <div className="topic-panel">
+      <div className="topic-section">
+        <h3>Travel & Stay Guide</h3>
+        {!selectedCity ? (
+          <div className="dashboard-empty-state">
+            <h3>Select a city to explore travel options.</h3>
+          </div>
+        ) : (
+          <TravelSearch cityName={cityName} />
+        )}
       </div>
     </div>
   );
