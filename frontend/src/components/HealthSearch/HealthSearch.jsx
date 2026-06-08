@@ -3,7 +3,7 @@ import axios from "axios";
 import HealthResultCard from "./HealthResultCard.jsx";
 import "./HealthSearch.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
 const SUGGESTED_CONDITIONS = [
   "Heart disease", "Cancer", "Kidney failure",
